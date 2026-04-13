@@ -29,8 +29,12 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Rota pública: /approve/[token] (aprovação do cliente sem login)
-  if (pathname.startsWith('/approve/')) {
+  // Rotas públicas: aprovação do cliente e webhooks do n8n/Z-API
+  if (
+    pathname.startsWith('/approve/') ||
+    pathname.startsWith('/api/webhooks/') ||
+    pathname.startsWith('/api/public-approval')
+  ) {
     return supabaseResponse
   }
 
