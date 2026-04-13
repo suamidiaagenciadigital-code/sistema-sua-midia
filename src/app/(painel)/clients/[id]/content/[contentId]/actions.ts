@@ -12,6 +12,7 @@ export async function updateContentAction(clientId: string, contentId: string, f
     caption: formData.get('caption') as string,
     script: formData.get('script') as string || null,
     image_prompt: formData.get('image_prompt') as string || null,
+    generated_image_url: formData.get('generated_image_url') as string || null,
     cta: formData.get('cta') as string || null,
     partner_mentioned: formData.get('partner_mentioned') as string || null,
     scheduled_date: formData.get('scheduled_date') as string || null,

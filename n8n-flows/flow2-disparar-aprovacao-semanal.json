@@ -13,8 +13,7 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [240, 300],
-      "webhookId": "disparar-aprovacao",
-      "notes": "Chamado pelo botão no sistema. Body: { clientId, weekStart, weekEnd }"
+      "webhookId": "disparar-aprovacao"
     },
     {
       "parameters": {
@@ -37,8 +36,7 @@
       "name": "Buscar conteúdos da semana",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [460, 300],
-      "notes": "Retorna: { client: {...}, groupJid: string, contents: [{id, type, title, caption, mediaUrl, scheduledDate}] }"
+      "position": [460, 300]
     },
     {
       "parameters": {
@@ -61,7 +59,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"error\": \"Nenhum conteúdo aprovado para a semana\" }",
+        "responseBody": "={ \"error\": \"Nenhum conteudo aprovado para a semana\" }",
         "options": { "responseCode": 422 }
       },
       "id": "respond-no-content",
@@ -134,6 +132,47 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.mediaUrl.match(/\\.(mp4|mov|avi|webm)(\\?|$)/i) !== null }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "check-is-video",
+      "name": "É vídeo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1780, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.z-api.io/instances/3F1910AF0A4BB2829C31AAE399BC1248/token/3F1A9C63F60F02131FE11D1F/send-video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "Fe00dc9584e8840d09e8fba90984de044S" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "bodyContentType": "json",
+        "jsonBody": "={{ {phone: $('Preparar dados').item.json.groupJid, video: $json.mediaUrl, caption: $json.caption} }}",
+        "options": {}
+      },
+      "id": "send-video",
+      "name": "Z-API — enviar vídeo com legenda",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 100]
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://api.z-api.io/instances/3F1910AF0A4BB2829C31AAE399BC1248/token/3F1A9C63F60F02131FE11D1F/send-image",
         "sendHeaders": true,
@@ -149,11 +188,11 @@
         "jsonBody": "={{ {phone: $('Preparar dados').item.json.groupJid, image: $json.mediaUrl, caption: $json.caption} }}",
         "options": {}
       },
-      "id": "send-media",
-      "name": "Z-API — enviar criativo com legenda",
+      "id": "send-image",
+      "name": "Z-API — enviar imagem com legenda",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1780, 200]
+      "position": [2000, 260]
     },
     {
       "parameters": {
@@ -176,7 +215,7 @@
       "name": "Z-API — enviar só legenda",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1780, 420]
+      "position": [2000, 420]
     },
     {
       "parameters": {
@@ -199,7 +238,7 @@
       "name": "Z-API — enviar botões de ação",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2000, 300]
+      "position": [2220, 300]
     },
     {
       "parameters": {
@@ -222,7 +261,7 @@
       "name": "Sistema — marcar como enviado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2220, 300]
+      "position": [2440, 300]
     },
     {
       "parameters": {
@@ -234,7 +273,7 @@
       "name": "Responder OK",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [2440, 300]
+      "position": [2660, 300]
     }
   ],
   "connections": {
@@ -261,11 +300,20 @@
     },
     "Tem mídia?": {
       "main": [
-        [{ "node": "Z-API — enviar criativo com legenda", "type": "main", "index": 0 }],
+        [{ "node": "É vídeo?", "type": "main", "index": 0 }],
         [{ "node": "Z-API — enviar só legenda", "type": "main", "index": 0 }]
       ]
     },
-    "Z-API — enviar criativo com legenda": {
+    "É vídeo?": {
+      "main": [
+        [{ "node": "Z-API — enviar vídeo com legenda", "type": "main", "index": 0 }],
+        [{ "node": "Z-API — enviar imagem com legenda", "type": "main", "index": 0 }]
+      ]
+    },
+    "Z-API — enviar vídeo com legenda": {
+      "main": [[{ "node": "Z-API — enviar botões de ação", "type": "main", "index": 0 }]]
+    },
+    "Z-API — enviar imagem com legenda": {
       "main": [[{ "node": "Z-API — enviar botões de ação", "type": "main", "index": 0 }]]
     },
     "Z-API — enviar só legenda": {
@@ -280,6 +328,6 @@
   },
   "settings": { "executionOrder": "v1" },
   "meta": {
-    "description": "Disparado manualmente pelo sistema. Busca conteudos aprovados da semana, envia criativo + legenda + botoes Aprovar/Corrigir no grupo do cliente via Z-API. Atualiza status para sent_to_client."
+    "description": "Disparado pelo sistema. Busca conteudos da semana, envia criativo (imagem ou video) + legenda + botoes Aprovar/Corrigir no grupo do cliente."
   }
 }

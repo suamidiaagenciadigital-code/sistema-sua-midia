@@ -91,6 +91,17 @@ export default async function ContentDetailPage({ params }: Props) {
         )}
 
         <div className="space-y-1">
+          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">URL do criativo (imagem ou vídeo)</label>
+          <input type="url" name="generated_image_url" defaultValue={content.generated_image_url ?? ''} placeholder="https://..." className={base} />
+          <p className="text-xs text-zinc-500">Link público da imagem ou vídeo que será enviado no WhatsApp para aprovação.</p>
+          {content.generated_image_url && (
+            <a href={content.generated_image_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
+              Ver criativo atual
+            </a>
+          )}
+        </div>
+
+        <div className="space-y-1">
           <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Prompt de imagem</label>
           <textarea name="image_prompt" rows={3} defaultValue={content.image_prompt ?? ''} className={base} />
         </div>
