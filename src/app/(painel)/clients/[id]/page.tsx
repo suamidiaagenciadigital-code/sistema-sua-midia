@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { updateClientAction } from './actions'
 import { DeleteClientButton } from './delete-button'
+import { DispatchApprovalButton } from './dispatch-approval-button'
 import { ChevronLeft, Sparkles } from 'lucide-react'
 import { Client } from '@/lib/types'
 
@@ -157,6 +158,8 @@ export default async function ClientPage({ params }: Props) {
           </Link>
         </div>
       </form>
+
+      <DispatchApprovalButton clientId={id} />
 
       {/* Zona de perigo */}
       <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-5 space-y-3">

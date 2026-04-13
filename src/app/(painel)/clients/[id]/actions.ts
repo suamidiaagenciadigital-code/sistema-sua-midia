@@ -46,3 +46,20 @@ export async function deleteClientAction(id: string) {
   await supabase.from('clients').delete().eq('id', id)
   redirect('/clients')
 }
+
+export async function dispararAprovacaoAction(clientId: string, weekStart: string, weekEnd: string) {
+  const n8nUrl = process.env.N8N_WEBHOOK_URL || 'https://suamidia.app.n8n.cloud/webhook/disparar-aprovacao'
+
+  const res = await fetch(n8nUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ clientId, weekStart, weekEnd }),
+  })
+
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`n8n retornou ${res.status}: ${body}`)
+  }
+
+  return { ok: true }
+}
