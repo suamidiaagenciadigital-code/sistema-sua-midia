@@ -1,0 +1,267 @@
+{
+  "name": "03 — Processar Resposta de Aprovação do Cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-response",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-response",
+      "name": "Webhook Z-API (resposta do cliente)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "whatsapp-response",
+      "notes": "Configure na Z-API para receber: cliques em botões e mensagens de texto de grupos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.isGroup }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            },
+            {
+              "leftValue": "={{ $json.body.fromMe }}",
+              "rightValue": false,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-group",
+      "name": "Filtrar — mensagens de grupo",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "id": "ignore",
+      "name": "Ignorar",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.item.json.body;\n\n// Detectar clique em botão (Z-API retorna buttonId)\nconst buttonId = body.buttonResponse?.selectedButtonId || body.listResponse?.singleSelectReply?.selectedRowId || '';\n\nif (buttonId.startsWith('APPROVE::')) {\n  return { action: 'approve', contentId: buttonId.replace('APPROVE::', ''), isButton: true };\n}\n\nif (buttonId.startsWith('CORRECT::')) {\n  return { action: 'awaiting_correction', contentId: buttonId.replace('CORRECT::', ''), isButton: true };\n}\n\n// Detectar se é uma correção em texto livre (resposta contextual)\n// Neste caso o flow de contexto deve ter armazenado o contentId em espera\nconst text = body.text?.message || '';\nreturn { action: 'text_message', text, isButton: false, chatId: body.chatId };"
+      },
+      "id": "detect-action",
+      "name": "Detectar ação (aprovar / corrigir / texto)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "rules": [
+            {
+              "conditions": {
+                "conditions": [
+                  { "leftValue": "={{ $json.action }}", "rightValue": "approve", "operator": { "type": "string", "operation": "equals" } }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "approve"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  { "leftValue": "={{ $json.action }}", "rightValue": "awaiting_correction", "operator": { "type": "string", "operation": "equals" } }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "awaiting_correction"
+            },
+            {
+              "conditions": {
+                "conditions": [
+                  { "leftValue": "={{ $json.action }}", "rightValue": "text_message", "operator": { "type": "string", "operation": "equals" } }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "text_message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "route-action",
+      "name": "Rotear ação",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SISTEMA_URL }}/api/webhooks/n8n/approve-content",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"contentId\": \"{{ $json.contentId }}\",\n  \"status\": \"approved_by_client\"\n}",
+        "options": {}
+      },
+      "id": "approve-content",
+      "name": "Sistema — aprovar conteúdo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Webhook Z-API (resposta do cliente)').item.json.body.chatId }}\",\n  \"message\": \"✅ Ótimo! Publicação aprovada! Semana aprovada com sucesso. 🎉\"\n}",
+        "options": {}
+      },
+      "id": "confirm-approved",
+      "name": "Z-API — confirmar aprovação",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Webhook Z-API (resposta do cliente)').item.json.body.chatId }}\",\n  \"message\": \"✏️ Entendido! Por favor, descreva abaixo qual correção você gostaria para essa publicação:\"\n}",
+        "options": {}
+      },
+      "id": "ask-correction",
+      "name": "Z-API — pedir descrição da correção",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 360]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SISTEMA_URL }}/api/webhooks/n8n/request-revision",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"contentId\": \"{{ $json.contentId }}\",\n  \"revisionNotes\": \"{{ $json.text }}\",\n  \"status\": \"revision\"\n}",
+        "options": {}
+      },
+      "id": "request-revision",
+      "name": "Sistema — registrar correção",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Webhook Z-API (resposta do cliente)').item.json.body.chatId }}\",\n  \"message\": \"📝 Anotado! Agradecemos o feedback. Em breve enviaremos a publicação corrigida para sua aprovação. 🙏\"\n}",
+        "options": {}
+      },
+      "id": "confirm-revision",
+      "name": "Z-API — confirmar correção recebida",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 520]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "id": "respond-ok",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1560, 360]
+    }
+  ],
+  "connections": {
+    "Webhook Z-API (resposta do cliente)": {
+      "main": [[{ "node": "Filtrar — mensagens de grupo", "type": "main", "index": 0 }]]
+    },
+    "Filtrar — mensagens de grupo": {
+      "main": [
+        [{ "node": "Detectar ação (aprovar / corrigir / texto)", "type": "main", "index": 0 }],
+        [{ "node": "Ignorar", "type": "main", "index": 0 }]
+      ]
+    },
+    "Detectar ação (aprovar / corrigir / texto)": {
+      "main": [[{ "node": "Rotear ação", "type": "main", "index": 0 }]]
+    },
+    "Rotear ação": {
+      "main": [
+        [{ "node": "Sistema — aprovar conteúdo", "type": "main", "index": 0 }],
+        [{ "node": "Z-API — pedir descrição da correção", "type": "main", "index": 0 }],
+        [{ "node": "Sistema — registrar correção", "type": "main", "index": 0 }]
+      ]
+    },
+    "Sistema — aprovar conteúdo": {
+      "main": [[{ "node": "Z-API — confirmar aprovação", "type": "main", "index": 0 }]]
+    },
+    "Z-API — confirmar aprovação": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    },
+    "Z-API — pedir descrição da correção": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    },
+    "Sistema — registrar correção": {
+      "main": [[{ "node": "Z-API — confirmar correção recebida", "type": "main", "index": 0 }]]
+    },
+    "Z-API — confirmar correção recebida": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "description": "Processa respostas dos clientes nos grupos. Detecta clique em Aprovar (atualiza para approved_by_client + confirma) ou Corrigir (pede descrição + registra revisão no sistema + agradece cordialmente)."
+  }
+}

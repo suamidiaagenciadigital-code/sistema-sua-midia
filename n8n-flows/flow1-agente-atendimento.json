@@ -1,0 +1,252 @@
+{
+  "name": "01 — Agente de Atendimento WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-incoming",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-incoming",
+      "name": "Webhook Z-API (mensagem recebida)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "whatsapp-incoming"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.isGroup }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            },
+            {
+              "leftValue": "={{ $json.body.fromMe }}",
+              "rightValue": false,
+              "operator": { "type": "boolean", "operation": "equals" }
+            },
+            {
+              "leftValue": "={{ $json.body.type }}",
+              "rightValue": "ReceivedCallback",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "filter-group-messages",
+      "name": "Filtrar — só grupos, não do bot",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "id": "respond-ignore",
+      "name": "Ignorar (não é grupo)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SISTEMA_URL }}/api/webhooks/n8n/get-client-by-group",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "groupJid", "value": "={{ $json.body.chatId }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-client",
+      "name": "Buscar cliente pelo grupo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "check-client-found",
+      "name": "Cliente encontrado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-5\",\n  \"max_tokens\": 500,\n  \"system\": \"Você é um assistente de atendimento da agência Sua Mídia, respondendo em nome da equipe no grupo de WhatsApp do cliente.\\n\\n## CLIENTE: {{ $('Buscar cliente pelo grupo').item.json.client.name }}\\nNicho: {{ $('Buscar cliente pelo grupo').item.json.client.niche }}\\nTom de voz da marca: {{ $('Buscar cliente pelo grupo').item.json.client.tone_of_voice }}\\nServiços contratados: {{ $('Buscar cliente pelo grupo').item.json.client.contracted_services }}\\n\\n## REGRAS DE ATENDIMENTO\\n- Responda de forma humanizada, nunca robótica\\n- Use o nome do cliente quando adequado\\n- Seja cordial, objetivo e profissional\\n- Se não souber responder algo específico, diga: 'Vou verificar com a equipe e retorno em breve!' \\n- Nunca invente informações sobre prazos, valores ou serviços não confirmados\\n- Horário de atendimento: você responde 24h, mas decisões complexas passam pela equipe\\n- NÃO mencione que é uma IA\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"{{ $('Webhook Z-API (mensagem recebida)').item.json.body.text.message }}\" }\n  ]\n}",
+        "options": {}
+      },
+      "id": "call-claude",
+      "name": "Claude — gerar resposta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $input.item.json.content;\nconst text = content[0].text;\nreturn { response: text };"
+      },
+      "id": "extract-response",
+      "name": "Extrair resposta da IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Webhook Z-API (mensagem recebida)').item.json.body.chatId }}\",\n  \"message\": \"{{ $json.response }}\"\n}",
+        "options": {}
+      },
+      "id": "send-whatsapp",
+      "name": "Z-API — enviar resposta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Webhook Z-API (mensagem recebida)').item.json.body.chatId }}\",\n  \"message\": \"Olá! 👋 Recebi sua mensagem e vou verificar com a equipe. Retorno em breve!\"\n}",
+        "options": {}
+      },
+      "id": "send-fallback",
+      "name": "Z-API — cliente não identificado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SISTEMA_URL }}/api/webhooks/whatsapp",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Webhook Z-API (mensagem recebida)').item.json.body.senderPhone }}\",\n  \"message\": \"{{ $('Webhook Z-API (mensagem recebida)').item.json.body.text.message }}\",\n  \"client_id\": \"{{ $('Buscar cliente pelo grupo').item.json.client.id }}\"\n}",
+        "options": {}
+      },
+      "id": "create-ticket",
+      "name": "Criar ticket no sistema",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 220]
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "id": "respond-ok",
+      "name": "Responder webhook OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Z-API (mensagem recebida)": {
+      "main": [[{ "node": "Filtrar — só grupos, não do bot", "type": "main", "index": 0 }]]
+    },
+    "Filtrar — só grupos, não do bot": {
+      "main": [
+        [{ "node": "Buscar cliente pelo grupo", "type": "main", "index": 0 }],
+        [{ "node": "Ignorar (não é grupo)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Buscar cliente pelo grupo": {
+      "main": [[{ "node": "Cliente encontrado?", "type": "main", "index": 0 }]]
+    },
+    "Cliente encontrado?": {
+      "main": [
+        [{ "node": "Claude — gerar resposta", "type": "main", "index": 0 }],
+        [{ "node": "Z-API — cliente não identificado", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude — gerar resposta": {
+      "main": [[{ "node": "Extrair resposta da IA", "type": "main", "index": 0 }]]
+    },
+    "Extrair resposta da IA": {
+      "main": [[{ "node": "Z-API — enviar resposta", "type": "main", "index": 0 }]]
+    },
+    "Z-API — enviar resposta": {
+      "main": [[{ "node": "Criar ticket no sistema", "type": "main", "index": 0 }]]
+    },
+    "Criar ticket no sistema": {
+      "main": [[{ "node": "Responder webhook OK", "type": "main", "index": 0 }]]
+    },
+    "Z-API — cliente não identificado": {
+      "main": [[{ "node": "Responder webhook OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "description": "Agente humanizado de atendimento. Recebe mensagens de grupos WhatsApp via Z-API, identifica o cliente, chama Claude com o perfil do cliente e responde humanizadamente. Também cria ticket no sistema para rastreamento."
+  }
+}

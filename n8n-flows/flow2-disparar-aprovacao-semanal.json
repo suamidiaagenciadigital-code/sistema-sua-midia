@@ -1,0 +1,266 @@
+{
+  "name": "02 — Disparar Aprovação Semanal para Cliente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "disparar-aprovacao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook — disparar aprovação (sistema)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "disparar-aprovacao",
+      "notes": "Chamado pelo botão no sistema. Body: { clientId, weekStart, weekEnd }"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SISTEMA_URL }}/api/webhooks/n8n/get-week-contents",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"clientId\": \"{{ $json.body.clientId }}\",\n  \"weekStart\": \"{{ $json.body.weekStart }}\",\n  \"weekEnd\": \"{{ $json.body.weekEnd }}\"\n}",
+        "options": {}
+      },
+      "id": "get-week-contents",
+      "name": "Buscar conteúdos da semana",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "notes": "Retorna: { client: {...}, groupJid: string, contents: [{id, type, title, caption, mediaUrl, scheduledDate}] }"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.contents.length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ]
+        }
+      },
+      "id": "check-has-contents",
+      "name": "Tem conteúdos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"error\": \"Nenhum conteúdo aprovado para a semana\" }",
+        "options": { "responseCode": 422 }
+      },
+      "id": "respond-no-content",
+      "name": "Responder — sem conteúdo",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Buscar conteúdos da semana').item.json.groupJid }}\",\n  \"message\": \"📅 *Planejamento semanal para aprovação*\\n\\nOlá! Segue abaixo o conteúdo planejado para a semana de *{{ $json.body.weekStart }}* a *{{ $json.body.weekEnd }}*.\\n\\nPor favor, avalie cada publicação abaixo e clique em ✅ *Aprovar* ou ✏️ *Corrigir*.\"\n}",
+        "options": {}
+      },
+      "id": "send-intro-message",
+      "name": "Z-API — enviar mensagem introdutória",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "contents",
+        "options": {}
+      },
+      "id": "split-contents",
+      "name": "Separar cada conteúdo",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.mediaUrl }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ]
+        }
+      },
+      "id": "check-has-media",
+      "name": "Tem mídia?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-image",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Buscar conteúdos da semana').item.json.groupJid }}\",\n  \"image\": \"{{ $json.mediaUrl }}\",\n  \"caption\": \"{{ $json.caption }}\"\n}",
+        "options": {}
+      },
+      "id": "send-media",
+      "name": "Z-API — enviar criativo com legenda",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Buscar conteúdos da semana').item.json.groupJid }}\",\n  \"message\": \"{{ $json.caption }}\"\n}",
+        "options": {}
+      },
+      "id": "send-text-only",
+      "name": "Z-API — enviar só legenda",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 420]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-button-list",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"phone\": \"{{ $('Buscar conteúdos da semana').item.json.groupJid }}\",\n  \"message\": \"📌 *{{ $json.type | upper }} — {{ $json.scheduledDate }}*\\nTítulo: {{ $json.title }}\",\n  \"buttonList\": {\n    \"buttons\": [\n      { \"id\": \"APPROVE::{{ $json.id }}\", \"label\": \"✅ Aprovar\" },\n      { \"id\": \"CORRECT::{{ $json.id }}\", \"label\": \"✏️ Corrigir\" }\n    ]\n  }\n}",
+        "options": {}
+      },
+      "id": "send-buttons",
+      "name": "Z-API — enviar botões de ação",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SISTEMA_URL }}/api/webhooks/n8n/mark-sent-to-client",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={\n  \"contentId\": \"{{ $('Separar cada conteúdo').item.json.id }}\"\n}",
+        "options": {}
+      },
+      "id": "mark-sent",
+      "name": "Sistema — marcar como enviado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"sent\": true }",
+        "options": {}
+      },
+      "id": "respond-ok",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2220, 300]
+    }
+  ],
+  "connections": {
+    "Webhook — disparar aprovação (sistema)": {
+      "main": [[{ "node": "Buscar conteúdos da semana", "type": "main", "index": 0 }]]
+    },
+    "Buscar conteúdos da semana": {
+      "main": [[{ "node": "Tem conteúdos?", "type": "main", "index": 0 }]]
+    },
+    "Tem conteúdos?": {
+      "main": [
+        [{ "node": "Z-API — enviar mensagem introdutória", "type": "main", "index": 0 }],
+        [{ "node": "Responder — sem conteúdo", "type": "main", "index": 0 }]
+      ]
+    },
+    "Z-API — enviar mensagem introdutória": {
+      "main": [[{ "node": "Separar cada conteúdo", "type": "main", "index": 0 }]]
+    },
+    "Separar cada conteúdo": {
+      "main": [[{ "node": "Tem mídia?", "type": "main", "index": 0 }]]
+    },
+    "Tem mídia?": {
+      "main": [
+        [{ "node": "Z-API — enviar criativo com legenda", "type": "main", "index": 0 }],
+        [{ "node": "Z-API — enviar só legenda", "type": "main", "index": 0 }]
+      ]
+    },
+    "Z-API — enviar criativo com legenda": {
+      "main": [[{ "node": "Z-API — enviar botões de ação", "type": "main", "index": 0 }]]
+    },
+    "Z-API — enviar só legenda": {
+      "main": [[{ "node": "Z-API — enviar botões de ação", "type": "main", "index": 0 }]]
+    },
+    "Z-API — enviar botões de ação": {
+      "main": [[{ "node": "Sistema — marcar como enviado", "type": "main", "index": 0 }]]
+    },
+    "Sistema — marcar como enviado": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": {
+    "description": "Disparado manualmente pelo sistema. Busca conteúdos aprovados da semana, envia criativo + legenda + botões Aprovar/Corrigir no grupo do cliente via Z-API. Atualiza status para sent_to_client."
+  }
+}
