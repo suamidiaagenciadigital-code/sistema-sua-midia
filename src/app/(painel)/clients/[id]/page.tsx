@@ -159,7 +159,7 @@ export default async function ClientPage({ params }: Props) {
         </div>
       </form>
 
-      <DispatchApprovalButton clientId={id} />
+      <DispatchApprovalButton clientId={id} approvalToken={c.approval_token ?? null} />
 
       {/* Zona de perigo */}
       <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-5 space-y-3">

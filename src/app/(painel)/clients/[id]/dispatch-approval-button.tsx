@@ -15,7 +15,8 @@ function getWeekDates() {
   return { weekStart: fmt(monday), weekEnd: fmt(sunday) }
 }
 
-export function DispatchApprovalButton({ clientId }: { clientId: string }) {
+export function DispatchApprovalButton({ clientId, approvalToken }: { clientId: string; approvalToken: string | null }) {
+  const previewUrl = approvalToken ? `https://sistema-sua-midia.vercel.app/approve/${approvalToken}` : null
   const defaults = getWeekDates()
   const [weekStart, setWeekStart] = useState(defaults.weekStart)
   const [weekEnd, setWeekEnd] = useState(defaults.weekEnd)
@@ -45,11 +46,24 @@ export function DispatchApprovalButton({ clientId }: { clientId: string }) {
 
   return (
     <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-5 space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold text-white">Disparar aprovação semanal</h3>
-        <p className="text-xs text-zinc-500 mt-1">
-          Envia 1 link no grupo do WhatsApp. O cliente visualiza os criativos e aprova diretamente no sistema.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-white">Disparar aprovação semanal</h3>
+          <p className="text-xs text-zinc-500 mt-1">
+            Envia 1 link no grupo do WhatsApp. O cliente visualiza os criativos e aprova diretamente no sistema.
+          </p>
+        </div>
+        {previewUrl && (
+          <a
+            href={previewUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 flex-shrink-0 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-md px-3 py-1.5 transition-colors"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Pré-visualizar
+          </a>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-3 items-end">
