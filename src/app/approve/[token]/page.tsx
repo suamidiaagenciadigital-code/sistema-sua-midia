@@ -170,13 +170,12 @@ export default async function PublicApprovalPage({ params }: Props) {
                   {isCarousel ? (
                     <MediaCarousel urls={c.media_urls!} />
                   ) : isReel && singleUrl ? (
-                    <div className="w-full bg-zinc-900" style={{ aspectRatio: '9/16' }}>
+                    <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                       <iframe
                         src={getDriveEmbedUrl(singleUrl)!}
-                        className="w-full h-full border-0"
                         allow="autoplay; fullscreen"
                         allowFullScreen
-                        style={{ display: 'block' }}
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
                       />
                     </div>
                   ) : singleUrl ? (
