@@ -7,12 +7,19 @@ import { createClient } from '@/lib/supabase/server'
 export async function updateContentAction(clientId: string, contentId: string, formData: FormData) {
   const supabase = await createClient()
 
+  // Carousel: parse textarea de URLs (uma por linha)
+  const mediaUrlsText = formData.get('media_urls_text') as string | null
+  const mediaUrls = mediaUrlsText
+    ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
+    : null
+
   await supabase.from('contents').update({
     title: formData.get('title') as string,
     caption: formData.get('caption') as string,
     script: formData.get('script') as string || null,
     image_prompt: formData.get('image_prompt') as string || null,
     generated_image_url: formData.get('generated_image_url') as string || null,
+    media_urls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : null,
     cta: formData.get('cta') as string || null,
     partner_mentioned: formData.get('partner_mentioned') as string || null,
     scheduled_date: formData.get('scheduled_date') as string || null,

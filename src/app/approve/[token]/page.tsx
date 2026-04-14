@@ -2,18 +2,25 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { TYPE_LABEL } from '@/lib/content-status'
 import ApprovalActions from './approval-actions'
+import { MediaCarousel } from './media-carousel'
 
 interface Props {
   params: Promise<{ token: string }>
 }
 
-// Converte links do Google Drive para URL direta de imagem
-function resolveMediaUrl(url: string | null): string | null {
+// Converte Google Drive para URL direta (imagem)
+function resolveImageUrl(url: string | null): string | null {
   if (!url) return null
   const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/)
-  if (driveMatch) {
-    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`
-  }
+  if (driveMatch) return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`
+  return url
+}
+
+// Extrai FILE_ID do Drive para embed de vídeo
+function getDriveEmbedUrl(url: string | null): string | null {
+  if (!url) return null
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/)
+  if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`
   return url
 }
 
@@ -82,9 +89,9 @@ export default async function PublicApprovalPage({ params }: Props) {
             </div>
 
             {contents.map((c, i) => {
-              const rawUrl = c.generated_image_url ?? c.media_urls?.[0] ?? null
-              const mediaUrl = resolveMediaUrl(rawUrl)
-              const isVideo = rawUrl && /\.(mp4|mov|avi|webm)(\?|$)/i.test(rawUrl)
+              const isReel = c.type === 'reel'
+              const isCarousel = c.type === 'carrossel' && c.media_urls && c.media_urls.length > 0
+              const singleUrl = c.generated_image_url ?? null
 
               return (
                 <article key={c.id} className={`border-b border-zinc-800 ${i > 0 ? 'mt-2' : ''}`}>
@@ -105,23 +112,25 @@ export default async function PublicApprovalPage({ params }: Props) {
                   </div>
 
                   {/* Criativo */}
-                  {mediaUrl ? (
+                  {isCarousel ? (
+                    <MediaCarousel urls={c.media_urls!} />
+                  ) : isReel && singleUrl ? (
+                    <div className="w-full aspect-square bg-zinc-900">
+                      <iframe
+                        src={getDriveEmbedUrl(singleUrl)!}
+                        className="w-full h-full"
+                        allow="autoplay"
+                        allowFullScreen
+                      />
+                    </div>
+                  ) : singleUrl ? (
                     <div className="w-full bg-zinc-900 aspect-square">
-                      {isVideo ? (
-                        <video
-                          src={mediaUrl}
-                          controls
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={mediaUrl}
-                          alt={c.title}
-                          className="w-full h-full object-cover"
-                        />
-                      )}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolveImageUrl(singleUrl)!}
+                        alt={c.title}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   ) : (
                     <div className="w-full aspect-square bg-zinc-900 flex flex-col items-center justify-center gap-2">

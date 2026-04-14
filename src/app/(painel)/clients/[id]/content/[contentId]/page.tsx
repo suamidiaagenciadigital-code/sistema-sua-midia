@@ -90,16 +90,36 @@ export default async function ContentDetailPage({ params }: Props) {
           </div>
         )}
 
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">URL do criativo (imagem ou vídeo)</label>
-          <input type="url" name="generated_image_url" defaultValue={content.generated_image_url ?? ''} placeholder="https://..." className={base} />
-          <p className="text-xs text-zinc-500">Link público da imagem ou vídeo que será enviado no WhatsApp para aprovação.</p>
-          {content.generated_image_url && (
-            <a href={content.generated_image_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
-              Ver criativo atual
-            </a>
-          )}
-        </div>
+        {content.type === 'carrossel' ? (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">URLs dos slides (uma por linha)</label>
+            <textarea
+              name="media_urls_text"
+              rows={5}
+              defaultValue={(content.media_urls ?? []).join('\n')}
+              placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view\nhttps://drive.google.com/file/d/ID3/view'}
+              className={base}
+            />
+            <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha. Serão exibidos em sequência como carrossel.</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+              {content.type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
+            </label>
+            <input type="url" name="generated_image_url" defaultValue={content.generated_image_url ?? ''} placeholder="https://drive.google.com/file/d/.../view" className={base} />
+            <p className="text-xs text-zinc-500">
+              {content.type === 'reel'
+                ? 'Link do vídeo no Google Drive. Será exibido como player na página de aprovação.'
+                : 'Link da imagem no Google Drive ou URL pública.'}
+            </p>
+            {content.generated_image_url && (
+              <a href={content.generated_image_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
+                Ver criativo atual
+              </a>
+            )}
+          </div>
+        )}
 
         <div className="space-y-1">
           <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Prompt de imagem</label>
