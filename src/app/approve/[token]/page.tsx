@@ -7,6 +7,16 @@ interface Props {
   params: Promise<{ token: string }>
 }
 
+// Converte links do Google Drive para URL direta de imagem
+function resolveMediaUrl(url: string | null): string | null {
+  if (!url) return null
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/)
+  if (driveMatch) {
+    return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`
+  }
+  return url
+}
+
 const TYPE_EMOJI: Record<string, string> = {
   feed: '📷',
   reel: '🎬',
@@ -72,8 +82,9 @@ export default async function PublicApprovalPage({ params }: Props) {
             </div>
 
             {contents.map((c, i) => {
-              const mediaUrl = c.generated_image_url ?? c.media_urls?.[0] ?? null
-              const isVideo = mediaUrl && /\.(mp4|mov|avi|webm)(\?|$)/i.test(mediaUrl)
+              const rawUrl = c.generated_image_url ?? c.media_urls?.[0] ?? null
+              const mediaUrl = resolveMediaUrl(rawUrl)
+              const isVideo = rawUrl && /\.(mp4|mov|avi|webm)(\?|$)/i.test(rawUrl)
 
               return (
                 <article key={c.id} className={`border-b border-zinc-800 ${i > 0 ? 'mt-2' : ''}`}>
