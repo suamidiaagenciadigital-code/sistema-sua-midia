@@ -49,6 +49,8 @@ export interface Client {
   locations?: Location[]
   social_links?: SocialLink[]
   status: ClientStatus
+  whatsapp_group_jid?: string | null
+  approval_token?: string | null
   created_at: string
   updated_at: string
 }
