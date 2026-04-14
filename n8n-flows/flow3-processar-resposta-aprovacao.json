@@ -105,11 +105,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SISTEMA_URL }}/api/webhooks/n8n/approve-content",
+        "url": "https://sistema-sua-midia.vercel.app/api/webhooks/n8n/approve-content",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "x-webhook-secret", "value": "suamidia@2026" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -127,11 +127,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "url": "https://api.z-api.io/instances/3F1910AF0A4BB2829C31AAE399BC1248/token/3F1A9C63F60F02131FE11D1F/send-text",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Client-Token", "value": "Fe00dc9584e8840d09e8fba90984de044S" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -149,11 +149,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "url": "https://api.z-api.io/instances/3F1910AF0A4BB2829C31AAE399BC1248/token/3F1A9C63F60F02131FE11D1F/send-text",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Client-Token", "value": "Fe00dc9584e8840d09e8fba90984de044S" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -171,11 +171,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.SISTEMA_URL }}/api/webhooks/n8n/request-revision",
+        "url": "https://sistema-sua-midia.vercel.app/api/webhooks/n8n/request-revision",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "x-webhook-secret", "value": "suamidia@2026" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -193,11 +193,11 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.z-api.io/instances/{{ $env.ZAPI_INSTANCE }}/token/{{ $env.ZAPI_TOKEN }}/send-text",
+        "url": "https://api.z-api.io/instances/3F1910AF0A4BB2829C31AAE399BC1248/token/3F1A9C63F60F02131FE11D1F/send-text",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Client-Token", "value": "={{ $env.ZAPI_CLIENT_TOKEN }}" },
+            { "name": "Client-Token", "value": "Fe00dc9584e8840d09e8fba90984de044S" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
@@ -265,3 +265,5 @@
     "description": "Processa respostas dos clientes nos grupos. Detecta clique em Aprovar (atualiza para approved_by_client + confirma) ou Corrigir (pede descrição + registra revisão no sistema + agradece cordialmente)."
   }
 }
+
+

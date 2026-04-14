@@ -61,5 +61,6 @@ export async function dispararAprovacaoAction(clientId: string, weekStart: strin
     throw new Error(`n8n retornou ${res.status}: ${body}`)
   }
 
-  return { ok: true }
+  const data = await res.json()
+  return { ok: true, approvalUrl: data.approvalUrl ?? null }
 }

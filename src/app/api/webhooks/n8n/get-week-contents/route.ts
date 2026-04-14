@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
   const { data: client } = await supabase
     .from('clients')
-    .select('id, name, whatsapp_group_jid')
+    .select('id, name, whatsapp_group_jid, approval_token')
     .eq('id', clientId)
     .single()
 
@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     client,
     groupJid: client.whatsapp_group_jid,
+    approvalToken: client.approval_token,
+    approvalUrl: `https://sistema-sua-midia.vercel.app/approve/${client.approval_token}`,
     contents: mapped,
   })
 }

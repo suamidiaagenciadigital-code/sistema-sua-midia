@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Send } from 'lucide-react'
+import { Send, ExternalLink, Copy, Check } from 'lucide-react'
 import { dispararAprovacaoAction } from './actions'
 
 function getWeekDates() {
@@ -20,27 +20,39 @@ export function DispatchApprovalButton({ clientId }: { clientId: string }) {
   const [weekStart, setWeekStart] = useState(defaults.weekStart)
   const [weekEnd, setWeekEnd] = useState(defaults.weekEnd)
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
+  const [approvalUrl, setApprovalUrl] = useState('')
+  const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
 
   async function handleClick() {
     setStatus('loading')
     setError('')
     try {
-      await dispararAprovacaoAction(clientId, weekStart, weekEnd)
+      const result = await dispararAprovacaoAction(clientId, weekStart, weekEnd)
+      setApprovalUrl(result.approvalUrl ?? '')
       setStatus('ok')
-      setTimeout(() => setStatus('idle'), 4000)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao disparar')
       setStatus('error')
     }
   }
 
+  async function handleCopy() {
+    await navigator.clipboard.writeText(approvalUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-5 space-y-4">
-      <h3 className="text-sm font-semibold text-white">Disparar aprovação semanal</h3>
-      <p className="text-xs text-zinc-500">Envia os conteúdos aprovados da semana para o grupo do WhatsApp do cliente.</p>
+      <div>
+        <h3 className="text-sm font-semibold text-white">Disparar aprovação semanal</h3>
+        <p className="text-xs text-zinc-500 mt-1">
+          Envia 1 link no grupo do WhatsApp. O cliente visualiza os criativos e aprova diretamente no sistema.
+        </p>
+      </div>
 
-      <div className="flex gap-3 items-end">
+      <div className="flex flex-wrap gap-3 items-end">
         <div className="space-y-1">
           <label className="text-xs text-zinc-400">Início da semana</label>
           <input
@@ -70,8 +82,22 @@ export function DispatchApprovalButton({ clientId }: { clientId: string }) {
       </div>
 
       {status === 'ok' && (
-        <p className="text-sm text-green-400">Aprovacao disparada com sucesso!</p>
+        <div className="rounded-md bg-green-950/40 border border-green-800/50 p-3 space-y-2">
+          <p className="text-sm text-green-400 font-medium">Link enviado no WhatsApp!</p>
+          {approvalUrl && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-400 truncate flex-1">{approvalUrl}</span>
+              <button onClick={handleCopy} className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white transition-colors flex-shrink-0">
+                {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+              <a href={approvalUrl} target="_blank" rel="noreferrer" className="text-zinc-400 hover:text-white transition-colors flex-shrink-0">
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          )}
+        </div>
       )}
+
       {status === 'error' && (
         <p className="text-sm text-red-400">{error}</p>
       )}
