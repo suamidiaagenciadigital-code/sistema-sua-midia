@@ -24,6 +24,61 @@ function getDriveEmbedUrl(url: string | null): string | null {
   return url
 }
 
+// Gera URL de download para Google Drive ou URL direta
+function getDownloadUrl(url: string | null): string | null {
+  if (!url) return null
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/)
+  if (driveMatch) return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`
+  return url
+}
+
+function DownloadButton({ urls, label }: { urls: string[]; label?: string }) {
+  if (urls.length === 0) return null
+  if (urls.length === 1) {
+    const dl = getDownloadUrl(urls[0])
+    if (!dl) return null
+    return (
+      <a
+        href={dl}
+        target="_blank"
+        rel="noreferrer"
+        className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 text-sm transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        {label ?? 'Baixar arquivo'}
+      </a>
+    )
+  }
+  // Carrossel: link para cada slide
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-zinc-500 text-center mb-2">Baixar slides</p>
+      <div className="flex flex-wrap gap-2 justify-center">
+        {urls.map((url, i) => {
+          const dl = getDownloadUrl(url)
+          if (!dl) return null
+          return (
+            <a
+              key={i}
+              href={dl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 text-xs transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Slide {i + 1}
+            </a>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 const TYPE_EMOJI: Record<string, string> = {
   feed: '📷',
   reel: '🎬',
@@ -160,6 +215,16 @@ export default async function PublicApprovalPage({ params }: Props) {
                         </summary>
                         <p className="mt-2 text-sm text-zinc-400 whitespace-pre-wrap bg-zinc-900 rounded-lg p-3">{c.script}</p>
                       </details>
+                    </div>
+                  )}
+
+                  {/* Botão de download */}
+                  {(singleUrl || (c.media_urls && c.media_urls.length > 0)) && (
+                    <div className="px-4 pb-3">
+                      <DownloadButton
+                        urls={isCarousel ? c.media_urls! : [singleUrl!]}
+                        label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
+                      />
                     </div>
                   )}
 
