@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react'
 import { STATUS_DOT, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
+import { DispatchApprovalButton } from '../dispatch-approval-button'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -18,7 +19,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
   const month = parseInt(sp.month ?? String(now.getMonth() + 1))
 
   const supabase = await createClient()
-  const { data: client } = await supabase.from('clients').select('id, name').eq('id', id).single()
+  const { data: client } = await supabase.from('clients').select('id, name, approval_token').eq('id', id).single()
   if (!client) notFound()
 
   // Buscar conteúdos do mês
@@ -90,6 +91,9 @@ export default async function CalendarPage({ params, searchParams }: Props) {
           </Link>
         </div>
       </div>
+
+      {/* Disparar aprovação */}
+      <DispatchApprovalButton clientId={id} approvalToken={client.approval_token ?? null} />
 
       {/* Legenda de status */}
       <div className="flex flex-wrap gap-3">
