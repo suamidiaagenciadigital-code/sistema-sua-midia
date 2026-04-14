@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { TYPE_LABEL } from '@/lib/content-status'
 import ApprovalActions from './approval-actions'
 import { MediaCarousel } from './media-carousel'
@@ -39,7 +39,7 @@ function formatDate(d: string) {
 
 export default async function PublicApprovalPage({ params }: Props) {
   const { token } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const { data: client } = await supabase
     .from('clients')
