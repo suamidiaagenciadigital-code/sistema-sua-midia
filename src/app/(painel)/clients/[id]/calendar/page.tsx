@@ -19,8 +19,16 @@ export default async function CalendarPage({ params, searchParams }: Props) {
   const month = parseInt(sp.month ?? String(now.getMonth() + 1))
 
   const supabase = await createClient()
-  const { data: client } = await supabase.from('clients').select('id, name, approval_token').eq('id', id).single()
+  const { data: client } = await supabase.from('clients').select('id, name').eq('id', id).single()
   if (!client) notFound()
+
+  // approval_token buscado separadamente (requer migration_v2)
+  const { data: clientExtra } = await supabase
+    .from('clients')
+    .select('approval_token')
+    .eq('id', id)
+    .single()
+  const approvalToken = clientExtra?.approval_token ?? null
 
   // Buscar conteúdos do mês
   const firstDay = `${year}-${String(month).padStart(2, '0')}-01`
@@ -93,7 +101,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
       </div>
 
       {/* Disparar aprovação */}
-      <DispatchApprovalButton clientId={id} approvalToken={client.approval_token ?? null} />
+      <DispatchApprovalButton clientId={id} approvalToken={approvalToken} />
 
       {/* Legenda de status */}
       <div className="flex flex-wrap gap-3">
