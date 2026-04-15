@@ -44,6 +44,14 @@ export default async function CalendarPage({ params, searchParams }: Props) {
     .lte('scheduled_date', lastDayStr)
     .order('scheduled_date')
 
+  // Rascunhos sem data (visíveis em qualquer mês)
+  const { data: undated } = await supabase
+    .from('contents')
+    .select('id, title, type, status, scheduled_date')
+    .eq('client_id', id)
+    .is('scheduled_date', null)
+    .order('created_at', { ascending: false })
+
   // Montar mapa dia → conteúdos
   const byDay: Record<number, typeof contents> = {}
   for (const c of contents ?? []) {
@@ -187,6 +195,39 @@ export default async function CalendarPage({ params, searchParams }: Props) {
           ))}
         </div>
       </div>
+
+      {/* Rascunhos sem data */}
+      {(undated?.length ?? 0) > 0 && (
+        <div className="rounded-lg border border-amber-900/40 bg-amber-950/10 overflow-hidden">
+          <div className="px-5 py-3 border-b border-amber-900/30 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-amber-300">
+              📋 Rascunhos sem data ({undated!.length})
+            </h2>
+            <p className="text-xs text-amber-700">Defina uma data para aparecerem no calendário</p>
+          </div>
+          <div className="divide-y divide-amber-900/20">
+            {undated!.map((c: any) => (
+              <Link
+                key={c.id}
+                href={`/clients/${id}/content/${c.id}`}
+                className="flex items-center justify-between px-5 py-3 hover:bg-amber-950/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">{TYPE_ICON[c.type]}</span>
+                  <div>
+                    <p className="text-sm text-white font-medium">{c.title}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{TYPE_LABEL[c.type]} · sem data definida</p>
+                  </div>
+                </div>
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs ${STATUS_COLOR_CLASSES[c.status as ContentStatus] ?? ''}`}>
+                  <div className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[c.status as ContentStatus]}`} />
+                  {STATUS_LABEL[c.status as ContentStatus]}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Lista do mês (view alternativa) */}
       {(contents?.length ?? 0) > 0 && (

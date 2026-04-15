@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2, PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle } from 'lucide-react'
+import { ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2, PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays } from 'lucide-react'
 
 interface Generated {
   title: string
@@ -29,10 +30,10 @@ interface CarouselCard {
 }
 
 const contentTypes = [
-  { value: 'reel', label: 'Reel', desc: 'Vídeo vertical ~30-60s' },
+  { value: 'reel',      label: 'Reel',      desc: 'Vídeo vertical ~30-60s' },
   { value: 'carrossel', label: 'Carrossel', desc: '5-8 slides educativos' },
-  { value: 'feed', label: 'Feed', desc: 'Post de imagem' },
-  { value: 'story', label: 'Story', desc: 'Conteúdo efêmero' },
+  { value: 'feed',      label: 'Feed',      desc: 'Post de imagem' },
+  { value: 'story',     label: 'Story',     desc: 'Conteúdo efêmero' },
 ]
 
 const base = "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500"
@@ -153,6 +154,7 @@ function CardsEditor({ cards, setCards }: { cards: CarouselCard[]; setCards: (c:
 // ── Componente principal ──────────────────────────────────────
 
 export default function ContentGenerator({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const router = useRouter()
   const [mode, setMode] = useState<'ai' | 'manual'>('ai')
   const [type, setType] = useState('reel')
   const [theme, setTheme] = useState('')
@@ -165,7 +167,11 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
   const [edited, setEdited] = useState<Generated | null>(null)
   const [scheduledDate, setScheduledDate] = useState('')
 
-  // Estado das cenas/cards (manuais)
+  // URL do criativo
+  const [creativeUrl, setCreativeUrl] = useState('')
+  const [mediaUrlsText, setMediaUrlsText] = useState('')
+
+  // Estado das cenas/cards
   const [scenes, setScenes] = useState<ReelScene[]>([])
   const [cards, setCards] = useState<CarouselCard[]>([])
   const [showPrompts, setShowPrompts] = useState(false)
@@ -177,6 +183,8 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     setEdited({ title: '', caption: '', script: null, image_prompt: '', cta: '', partner_mentioned: null })
     setScenes([])
     setCards([])
+    setCreativeUrl('')
+    setMediaUrlsText('')
     setSaved(false)
     setError('')
   }
@@ -185,7 +193,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     setMode(m)
     setImportError('')
     if (m === 'manual') initManual()
-    else setEdited(null)
+    else { setEdited(null); setCreativeUrl(''); setMediaUrlsText('') }
   }
 
   // Import de conteúdo único via JSON
@@ -196,8 +204,6 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     try {
       const text = await file.text()
       const data = JSON.parse(text)
-
-      // Aceita tanto objeto único quanto { contents: [...] } com 1 item
       const item = Array.isArray(data.contents) ? data.contents[0] : data
 
       if (!item?.title) {
@@ -205,7 +211,6 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         return
       }
 
-      // Preencher tipo (se válido)
       const validTypes = ['feed', 'reel', 'story', 'carrossel', 'imagem']
       if (item.type && validTypes.includes(item.type)) setType(item.type)
 
@@ -219,6 +224,8 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
       })
 
       if (item.scheduled_date) setScheduledDate(item.scheduled_date)
+      if (item.generated_image_url) setCreativeUrl(item.generated_image_url)
+      if (item.media_urls?.length) setMediaUrlsText(item.media_urls.join('\n'))
       if (Array.isArray(item.reel_scenes) && item.reel_scenes.length > 0) setScenes(item.reel_scenes)
       if (Array.isArray(item.carousel_cards) && item.carousel_cards.length > 0) setCards(item.carousel_cards)
       if (item.image_prompt) setShowPrompts(true)
@@ -243,7 +250,6 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
       if (!res.ok) throw new Error('Erro ao gerar conteúdo')
       const data = await res.json()
       setEdited(data)
-      // Preencher cenas/cards se a IA retornar
       if (data.reel_scenes) setScenes(data.reel_scenes)
       if (data.carousel_cards) setCards(data.carousel_cards)
     } catch {
@@ -255,14 +261,26 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
 
   const save = async () => {
     if (!edited) return
+    if (!edited.title?.trim()) {
+      setError('Preencha o título antes de salvar.')
+      return
+    }
     setSaving(true)
+    setError('')
     try {
+      // URL do criativo
+      const mediaUrls = type === 'carrossel'
+        ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
+        : null
+
       const payload = {
         client_id: clientId,
         type,
         scheduled_date: scheduledDate || null,
         status: 'draft',
         ...edited,
+        generated_image_url: type !== 'carrossel' && creativeUrl.trim() ? creativeUrl.trim() : null,
+        media_urls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : null,
         reel_scenes: type === 'reel' && scenes.length > 0 ? scenes : null,
         carousel_cards: type === 'carrossel' && cards.length > 0 ? cards : null,
       }
@@ -271,9 +289,17 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      if (res.ok) setSaved(true)
-    } catch {
-      setError('Erro ao salvar conteúdo.')
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? 'Erro ao salvar')
+      }
+      setSaved(true)
+      // Redirecionar para o calendário após 1.5s
+      setTimeout(() => {
+        router.push(`/clients/${clientId}/calendar`)
+      }, 1500)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao salvar conteúdo.')
     } finally {
       setSaving(false)
     }
@@ -301,41 +327,42 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
   return (
     <div className="max-w-3xl space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href={`/clients/${clientId}`} className="text-zinc-400 hover:text-white transition-colors">
-          <ChevronLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-white">Novo conteúdo</h1>
-          <p className="text-zinc-400 text-sm mt-0.5">{clientName}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link href={`/clients/${clientId}/calendar`} className="text-zinc-400 hover:text-white transition-colors">
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Novo conteúdo</h1>
+            <p className="text-zinc-400 text-sm mt-0.5">{clientName}</p>
+          </div>
         </div>
+        <Link
+          href={`/clients/${clientId}/calendar`}
+          className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors"
+        >
+          <CalendarDays className="h-4 w-4" />
+          Ver calendário
+        </Link>
       </div>
 
       {/* Modo: IA ou Manual */}
       <div className="flex gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
-        <button
-          type="button"
-          onClick={() => switchMode('ai')}
+        <button type="button" onClick={() => switchMode('ai')}
           className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
             mode === 'ai' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <Sparkles className="h-4 w-4" />
-          Gerar com IA
+          }`}>
+          <Sparkles className="h-4 w-4" /> Gerar com IA
         </button>
-        <button
-          type="button"
-          onClick={() => switchMode('manual')}
+        <button type="button" onClick={() => switchMode('manual')}
           className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
             mode === 'manual' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
-          }`}
-        >
-          <PenLine className="h-4 w-4" />
-          Criar manualmente
+          }`}>
+          <PenLine className="h-4 w-4" /> Criar manualmente
         </button>
       </div>
 
-      {/* Tipo de conteúdo (compartilhado) */}
+      {/* Tipo de conteúdo + controles de geração */}
       <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
         <div className="space-y-2">
           <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Tipo de conteúdo</label>
@@ -345,11 +372,12 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                 setType(ct.value)
                 setScenes([])
                 setCards([])
+                setCreativeUrl('')
+                setMediaUrlsText('')
               }}
                 className={`rounded-md border p-3 text-left transition-colors ${
                   type === ct.value ? 'border-white bg-zinc-700 text-white' : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
-                }`}
-              >
+                }`}>
                 <div className="text-sm font-medium">{ct.label}</div>
                 <div className="text-xs mt-0.5 opacity-70">{ct.desc}</div>
               </button>
@@ -357,18 +385,17 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
           </div>
         </div>
 
-        {/* Modo IA */}
+        {/* Controles modo IA */}
         {mode === 'ai' && (
           <>
             <div className="space-y-1">
               <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-                Tema / gancho <span className="normal-case text-zinc-600">(opcional — a IA escolhe se deixar vazio)</span>
+                Tema / gancho <span className="normal-case text-zinc-600">(opcional)</span>
               </label>
               <input type="text" value={theme} onChange={e => setTheme(e.target.value)}
                 placeholder="Ex: Dia do noivo, barba perfeita, experiência premium..."
                 className={base} />
             </div>
-
             <button onClick={generate} disabled={loading}
               className="flex items-center gap-2 rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? <><RefreshCw className="h-4 w-4 animate-spin" /> Gerando...</> : <><Sparkles className="h-4 w-4" /> Gerar com IA</>}
@@ -376,25 +403,18 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
           </>
         )}
 
-        {/* Modo Manual — importar JSON */}
+        {/* Controles modo manual */}
         {mode === 'manual' && (
           <div className="space-y-2">
-            <p className="text-xs text-zinc-500">
-              Preencha os campos abaixo manualmente, ou importe um JSON gerado no chat do Claude.
-            </p>
+            <p className="text-xs text-zinc-500">Preencha os campos abaixo ou importe um JSON gerado no chat do Claude.</p>
             <input ref={importRef} type="file" accept=".json" onChange={importFromFile} className="hidden" />
-            <button
-              type="button"
-              onClick={() => importRef.current?.click()}
-              className="flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
-            >
-              <FileUp className="h-4 w-4" />
-              Importar conteúdo (.json)
+            <button type="button" onClick={() => importRef.current?.click()}
+              className="flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors">
+              <FileUp className="h-4 w-4" /> Importar conteúdo (.json)
             </button>
             {importError && (
               <div className="flex items-center gap-1.5 text-xs text-red-400">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                {importError}
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />{importError}
               </div>
             )}
           </div>
@@ -403,7 +423,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         {error && <p className="text-sm text-red-400">{error}</p>}
       </div>
 
-      {/* Formulário de edição (IA gerado OU manual) */}
+      {/* Formulário de edição */}
       {edited !== null && (
         <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-5">
           <div className="flex items-center justify-between">
@@ -418,7 +438,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
             )}
           </div>
 
-          {inputField('Título / Tema', 'title', 'Ex: Barba do mês — o look mais pedido')}
+          {inputField('Título / Tema *', 'title', 'Ex: Barba do mês — o look mais pedido')}
           {textareaField('Copy / Legenda', 'caption', 6, 'Legenda completa com emojis e hashtags')}
 
           {(type === 'reel' || type === 'carrossel') && (
@@ -429,11 +449,44 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
             )
           )}
 
-          {/* Cenas (Reel) */}
+          {/* Cenas / Cards */}
           {type === 'reel' && <ScenesEditor scenes={scenes} setScenes={setScenes} />}
-
-          {/* Cards (Carrossel) */}
           {type === 'carrossel' && <CardsEditor cards={cards} setCards={setCards} />}
+
+          {/* URL do criativo */}
+          {type === 'carrossel' ? (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                URLs dos slides (uma por linha)
+              </label>
+              <textarea
+                rows={4}
+                value={mediaUrlsText}
+                onChange={e => setMediaUrlsText(e.target.value)}
+                placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                className={base + ' resize-none'}
+              />
+              <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha.</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                {type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
+              </label>
+              <input
+                type="url"
+                value={creativeUrl}
+                onChange={e => setCreativeUrl(e.target.value)}
+                placeholder="https://drive.google.com/file/d/.../view"
+                className={base}
+              />
+              <p className="text-xs text-zinc-500">
+                {type === 'reel'
+                  ? 'Link do vídeo no Google Drive. Exibido como player na aprovação.'
+                  : 'Link da imagem no Google Drive ou URL pública.'}
+              </p>
+            </div>
+          )}
 
           {/* Prompts toggle */}
           <div>
@@ -446,30 +499,35 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
 
           {showPrompts && (
             <div className="border-t border-zinc-800 pt-4">
-              {textareaField('Prompt de imagem (para geração visual)', 'image_prompt', 3, 'Descreva o visual para Midjourney/DALL-E')}
+              {textareaField('Prompt de imagem', 'image_prompt', 3, 'Descreva o visual para Midjourney/DALL-E')}
             </div>
           )}
 
           {inputField('CTA', 'cta', 'Ex: Agende pelo link na bio')}
           {inputField('Parceiro mencionado', 'partner_mentioned', 'Ex: @parceiro')}
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Data de publicação</label>
+          {/* Data de publicação — destaque */}
+          <div className="space-y-1 rounded-md border border-zinc-700 bg-zinc-800/40 p-3">
+            <label className="text-xs font-medium text-zinc-300 uppercase tracking-wide flex items-center gap-1.5">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Data de publicação
+              <span className="normal-case font-normal text-zinc-500 ml-1">(deixe em branco para salvar sem data)</span>
+            </label>
             <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
-              className="rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+              className="rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+            {!scheduledDate && (
+              <p className="text-xs text-amber-500/80">⚠ Sem data, o conteúdo aparece em "Rascunhos sem data" no calendário.</p>
+            )}
           </div>
 
           <div className="flex items-center gap-3 pt-1">
             <button onClick={save} disabled={saving || saved}
-              className="flex items-center gap-2 rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors disabled:opacity-50">
+              className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                saved ? 'bg-green-600 text-white' : 'bg-white text-zinc-900 hover:bg-zinc-100'
+              }`}>
               <Save className="h-4 w-4" />
-              {saved ? '✓ Salvo!' : saving ? 'Salvando...' : 'Salvar rascunho'}
+              {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar rascunho'}
             </button>
-            {saved && (
-              <Link href={`/clients/${clientId}/calendar`} className="text-sm text-zinc-400 hover:text-white transition-colors">
-                Ver no calendário →
-              </Link>
-            )}
           </div>
         </div>
       )}
