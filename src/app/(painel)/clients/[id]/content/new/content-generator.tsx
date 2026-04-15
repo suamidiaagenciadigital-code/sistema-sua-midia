@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2, PenLine, ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2, PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle } from 'lucide-react'
 
 interface Generated {
   title: string
@@ -169,6 +169,8 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
   const [scenes, setScenes] = useState<ReelScene[]>([])
   const [cards, setCards] = useState<CarouselCard[]>([])
   const [showPrompts, setShowPrompts] = useState(false)
+  const [importError, setImportError] = useState('')
+  const importRef = useRef<HTMLInputElement>(null)
 
   // Manual: inicializar campos vazios
   const initManual = () => {
@@ -181,8 +183,51 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
 
   const switchMode = (m: 'ai' | 'manual') => {
     setMode(m)
+    setImportError('')
     if (m === 'manual') initManual()
     else setEdited(null)
+  }
+
+  // Import de conteúdo único via JSON
+  const importFromFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportError('')
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+
+      // Aceita tanto objeto único quanto { contents: [...] } com 1 item
+      const item = Array.isArray(data.contents) ? data.contents[0] : data
+
+      if (!item?.title) {
+        setImportError('JSON inválido. O arquivo deve ter um campo "title".')
+        return
+      }
+
+      // Preencher tipo (se válido)
+      const validTypes = ['feed', 'reel', 'story', 'carrossel', 'imagem']
+      if (item.type && validTypes.includes(item.type)) setType(item.type)
+
+      setEdited({
+        title: item.title ?? '',
+        caption: item.caption ?? '',
+        script: item.script ?? null,
+        image_prompt: item.image_prompt ?? '',
+        cta: item.cta ?? '',
+        partner_mentioned: item.partner_mentioned ?? null,
+      })
+
+      if (item.scheduled_date) setScheduledDate(item.scheduled_date)
+      if (Array.isArray(item.reel_scenes) && item.reel_scenes.length > 0) setScenes(item.reel_scenes)
+      if (Array.isArray(item.carousel_cards) && item.carousel_cards.length > 0) setCards(item.carousel_cards)
+      if (item.image_prompt) setShowPrompts(true)
+
+    } catch {
+      setImportError('Erro ao ler o arquivo. Certifique-se que é um JSON válido.')
+    } finally {
+      if (importRef.current) importRef.current.value = ''
+    }
   }
 
   const generate = async () => {
@@ -329,6 +374,30 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
               {loading ? <><RefreshCw className="h-4 w-4 animate-spin" /> Gerando...</> : <><Sparkles className="h-4 w-4" /> Gerar com IA</>}
             </button>
           </>
+        )}
+
+        {/* Modo Manual — importar JSON */}
+        {mode === 'manual' && (
+          <div className="space-y-2">
+            <p className="text-xs text-zinc-500">
+              Preencha os campos abaixo manualmente, ou importe um JSON gerado no chat do Claude.
+            </p>
+            <input ref={importRef} type="file" accept=".json" onChange={importFromFile} className="hidden" />
+            <button
+              type="button"
+              onClick={() => importRef.current?.click()}
+              className="flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors"
+            >
+              <FileUp className="h-4 w-4" />
+              Importar conteúdo (.json)
+            </button>
+            {importError && (
+              <div className="flex items-center gap-1.5 text-xs text-red-400">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {importError}
+              </div>
+            )}
+          </div>
         )}
 
         {error && <p className="text-sm text-red-400">{error}</p>}
