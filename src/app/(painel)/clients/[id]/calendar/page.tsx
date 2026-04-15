@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react'
 import { STATUS_DOT, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
 import { DispatchApprovalButton } from '../dispatch-approval-button'
+import { ImportCalendarButton } from './import-calendar-button'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -90,12 +91,13 @@ export default async function CalendarPage({ params, searchParams }: Props) {
           >
             <ChevronRight className="h-4 w-4" />
           </Link>
+          <ImportCalendarButton clientId={id} />
           <Link
             href={`/clients/${id}/content/new`}
             className="flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors ml-2"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            Gerar conteúdo
+            Novo conteúdo
           </Link>
         </div>
       </div>

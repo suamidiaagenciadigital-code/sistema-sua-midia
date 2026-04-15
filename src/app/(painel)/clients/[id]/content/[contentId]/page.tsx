@@ -3,8 +3,9 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft, CalendarDays } from 'lucide-react'
 import { STATUS_COLOR, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
-import { updateContentAction, deleteContentAction } from './actions'
+import { deleteContentAction } from './actions'
 import { ContentStatusActions } from './content-actions-client'
+import { ContentEditForm } from './content-edit-form'
 
 interface Props {
   params: Promise<{ id: string; contentId: string }>
@@ -25,10 +26,7 @@ export default async function ContentDetailPage({ params }: Props) {
 
   const { data: client } = await supabase.from('clients').select('name').eq('id', id).single()
 
-  const update = updateContentAction.bind(null, id, contentId)
   const del = deleteContentAction.bind(null, id, contentId)
-
-  const base = "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500"
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -70,90 +68,7 @@ export default async function ContentDetailPage({ params }: Props) {
       </div>
 
       {/* Edição do conteúdo */}
-      <form action={update} className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-white">Conteúdo</h2>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Título / Tema</label>
-          <input type="text" name="title" defaultValue={content.title} className={base} />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Copy / Legenda</label>
-          <textarea name="caption" rows={6} defaultValue={content.caption ?? ''} className={base} />
-        </div>
-
-        {(content.type === 'reel' || content.type === 'carrossel') && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Roteiro / Estrutura de slides</label>
-            <textarea name="script" rows={8} defaultValue={content.script ?? ''} className={base} />
-          </div>
-        )}
-
-        {content.type === 'carrossel' ? (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">URLs dos slides (uma por linha)</label>
-            <textarea
-              name="media_urls_text"
-              rows={5}
-              defaultValue={(content.media_urls ?? []).join('\n')}
-              placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view\nhttps://drive.google.com/file/d/ID3/view'}
-              className={base}
-            />
-            <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha. Serão exibidos em sequência como carrossel.</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-              {content.type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
-            </label>
-            <input type="url" name="generated_image_url" defaultValue={content.generated_image_url ?? ''} placeholder="https://drive.google.com/file/d/.../view" className={base} />
-            <p className="text-xs text-zinc-500">
-              {content.type === 'reel'
-                ? 'Link do vídeo no Google Drive. Será exibido como player na página de aprovação.'
-                : 'Link da imagem no Google Drive ou URL pública.'}
-            </p>
-            {content.generated_image_url && (
-              <a href={content.generated_image_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline">
-                Ver criativo atual
-              </a>
-            )}
-          </div>
-        )}
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Prompt de imagem</label>
-          <textarea name="image_prompt" rows={3} defaultValue={content.image_prompt ?? ''} className={base} />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">CTA</label>
-            <input type="text" name="cta" defaultValue={content.cta ?? ''} className={base} />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Parceiro mencionado</label>
-            <input type="text" name="partner_mentioned" defaultValue={content.partner_mentioned ?? ''} className={base} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Data de publicação</label>
-            <input type="date" name="scheduled_date" defaultValue={content.scheduled_date ?? ''} className={base} />
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Notas de revisão</label>
-          <textarea name="revision_notes" rows={2} defaultValue={content.revision_notes ?? ''} className={base} />
-        </div>
-
-        <button type="submit"
-          className="rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors">
-          Salvar alterações
-        </button>
-      </form>
+      <ContentEditForm clientId={id} contentId={contentId} content={content} />
 
       {/* Links rápidos */}
       <div className="flex gap-3">

@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
       partner_mentioned: body.partner_mentioned || null,
       scheduled_date: body.scheduled_date || null,
       status: body.status || 'draft',
+      reel_scenes: body.reel_scenes ?? null,
+      carousel_cards: body.carousel_cards ?? null,
     })
     .select('id')
     .single()

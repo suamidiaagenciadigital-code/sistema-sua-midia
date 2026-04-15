@@ -13,6 +13,26 @@ export async function updateContentAction(clientId: string, contentId: string, f
     ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
     : null
 
+  // Cenas do Reel (JSON)
+  const reelScenesRaw = formData.get('reel_scenes_json') as string | null
+  let reelScenes = null
+  if (reelScenesRaw) {
+    try {
+      const parsed = JSON.parse(reelScenesRaw)
+      reelScenes = Array.isArray(parsed) && parsed.length > 0 ? parsed : null
+    } catch { /* ignora JSON inválido */ }
+  }
+
+  // Cards do Carrossel (JSON)
+  const carouselCardsRaw = formData.get('carousel_cards_json') as string | null
+  let carouselCards = null
+  if (carouselCardsRaw) {
+    try {
+      const parsed = JSON.parse(carouselCardsRaw)
+      carouselCards = Array.isArray(parsed) && parsed.length > 0 ? parsed : null
+    } catch { /* ignora JSON inválido */ }
+  }
+
   await supabase.from('contents').update({
     title: formData.get('title') as string,
     caption: formData.get('caption') as string,
@@ -20,6 +40,8 @@ export async function updateContentAction(clientId: string, contentId: string, f
     image_prompt: formData.get('image_prompt') as string || null,
     generated_image_url: formData.get('generated_image_url') as string || null,
     media_urls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : null,
+    reel_scenes: reelScenes,
+    carousel_cards: carouselCards,
     cta: formData.get('cta') as string || null,
     partner_mentioned: formData.get('partner_mentioned') as string || null,
     scheduled_date: formData.get('scheduled_date') as string || null,
