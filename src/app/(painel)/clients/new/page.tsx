@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClientAction } from './actions'
 import { ChevronLeft } from 'lucide-react'
+import { ImportClientProfileButton } from '../import-profile-button'
 
 interface FieldProps {
   label: string
@@ -56,6 +57,8 @@ export default function NewClientPage() {
           <p className="text-zinc-400 text-sm mt-0.5">Preencha o perfil-base para a IA gerar conteúdo</p>
         </div>
       </div>
+
+      <ImportClientProfileButton />
 
       <form action={createClientAction} className="space-y-8">
         <Section title="Identidade do negócio">

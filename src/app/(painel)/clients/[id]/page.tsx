@@ -6,6 +6,7 @@ import { DeleteClientButton } from './delete-button'
 import { DispatchApprovalButton } from './dispatch-approval-button'
 import { ChevronLeft, Sparkles } from 'lucide-react'
 import { Client } from '@/lib/types'
+import { ImportClientProfileButton } from '../import-profile-button'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -78,6 +79,8 @@ export default async function ClientPage({ params }: Props) {
           Gerar conteúdo
         </Link>
       </div>
+
+      <ImportClientProfileButton />
 
       <form action={update} className="space-y-8">
         <Section title="Identidade do negócio">
