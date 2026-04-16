@@ -18,7 +18,7 @@ export function MediaCarousel({ urls }: Props) {
   const total = urls.length
 
   return (
-    <div className="relative w-full aspect-square bg-zinc-900 select-none">
+    <div className="relative w-full bg-zinc-900 select-none" style={{ aspectRatio: '4/5' }}>
       {/* Imagem atual */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

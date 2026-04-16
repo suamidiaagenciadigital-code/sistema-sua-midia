@@ -179,7 +179,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                       />
                     </div>
                   ) : singleUrl ? (
-                    <div className="w-full bg-zinc-900 aspect-square">
+                    <div className="w-full bg-zinc-900" style={{ aspectRatio: '4/5' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={resolveImageUrl(singleUrl)!}
@@ -188,7 +188,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                       />
                     </div>
                   ) : (
-                    <div className="w-full aspect-square bg-zinc-900 flex flex-col items-center justify-center gap-2">
+                    <div className="w-full bg-zinc-900 flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '4/5' }}>
                       <span className="text-5xl">{TYPE_EMOJI[c.type] || '📄'}</span>
                       <p className="text-zinc-600 text-xs">Criativo não anexado</p>
                     </div>
