@@ -32,7 +32,7 @@ interface CarouselCard {
 const contentTypes = [
   { value: 'reel',      label: 'Reel',      desc: 'Vídeo vertical ~30-60s' },
   { value: 'carrossel', label: 'Carrossel', desc: '5-8 slides educativos' },
-  { value: 'feed',      label: 'Feed',      desc: 'Post de imagem' },
+  { value: 'imagem',    label: 'Imagem',    desc: 'Post de feed' },
   { value: 'story',     label: 'Story',     desc: 'Conteúdo efêmero' },
 ]
 
@@ -211,7 +211,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         return
       }
 
-      const validTypes = ['feed', 'reel', 'story', 'carrossel', 'imagem']
+      const validTypes = ['imagem', 'reel', 'story', 'carrossel']
       if (item.type && validTypes.includes(item.type)) setType(item.type)
 
       setEdited({

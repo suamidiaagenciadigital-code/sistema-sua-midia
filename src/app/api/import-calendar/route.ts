@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   const { data: client } = await supabase.from('clients').select('id').eq('id', clientId).single()
   if (!client) return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
 
-  const validTypes = ['feed', 'reel', 'story', 'carrossel', 'imagem']
+  const validTypes = ['imagem', 'reel', 'story', 'carrossel']
 
   const rows = payload.contents
     .filter(c => c.title && validTypes.includes(c.type))
