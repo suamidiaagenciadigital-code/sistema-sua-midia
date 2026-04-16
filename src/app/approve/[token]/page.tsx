@@ -4,6 +4,7 @@ import { TYPE_LABEL } from '@/lib/content-status'
 import ApprovalActions from './approval-actions'
 import { MediaCarousel } from './media-carousel'
 import { CopyCaptionButton } from './copy-caption-button'
+import { WhatsAppShareButton } from './whatsapp-share-button'
 
 interface Props {
   params: Promise<{ token: string }>
@@ -109,8 +110,11 @@ export default async function PublicApprovalPage({ params }: Props) {
     .from('contents')
     .select('id, title, type, caption, script, cta, scheduled_date, status, revision_notes, generated_image_url, media_urls')
     .eq('client_id', client.id)
-    .eq('status', 'sent_to_client')
+    .in('status', ['sent_to_client', 'approved_by_client'])
     .order('scheduled_date', { ascending: true })
+
+  const pending  = (contents ?? []).filter(c => c.status === 'sent_to_client')
+  const approved = (contents ?? []).filter(c => c.status === 'approved_by_client')
 
   const initials = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
@@ -129,7 +133,7 @@ export default async function PublicApprovalPage({ params }: Props) {
 
       {/* Feed */}
       <div className="max-w-[468px] mx-auto pb-12">
-        {!contents?.length ? (
+        {pending.length === 0 && approved.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 px-8 text-center space-y-3">
             <div className="text-4xl">✅</div>
             <p className="text-white font-semibold">Tudo certo por aqui!</p>
@@ -137,14 +141,17 @@ export default async function PublicApprovalPage({ params }: Props) {
           </div>
         ) : (
           <>
-            {/* Contador */}
-            <div className="px-4 py-3 border-b border-zinc-800">
-              <p className="text-zinc-400 text-sm">
-                <span className="text-white font-medium">{contents.length}</span> publicação{contents.length > 1 ? 'ões' : ''} aguardando sua aprovação
-              </p>
-            </div>
+            {/* Contador de pendentes */}
+            {pending.length > 0 && (
+              <div className="px-4 py-3 border-b border-zinc-800">
+                <p className="text-zinc-400 text-sm">
+                  <span className="text-white font-medium">{pending.length}</span> publicação{pending.length > 1 ? 'ões' : ''} aguardando sua aprovação
+                </p>
+              </div>
+            )}
 
-            {contents.map((c, i) => {
+            {/* Publicações pendentes */}
+            {pending.map((c, i) => {
               const isReel = c.type === 'reel'
               const isCarousel = c.type === 'carrossel' && c.media_urls && c.media_urls.length > 0
               const singleUrl = c.generated_image_url ?? null
@@ -224,13 +231,25 @@ export default async function PublicApprovalPage({ params }: Props) {
                     </div>
                   )}
 
-                  {/* Botão de download */}
+                  {/* Download + WhatsApp */}
                   {(singleUrl || (c.media_urls && c.media_urls.length > 0)) && (
-                    <div className="px-4 pb-3">
+                    <div className="px-4 pb-2 space-y-2">
                       <DownloadButton
                         urls={isCarousel ? c.media_urls! : [singleUrl!]}
                         label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
                       />
+                      {c.caption && (
+                        <WhatsAppShareButton
+                          caption={c.caption}
+                          imageUrl={getDownloadUrl(singleUrl)}
+                        />
+                      )}
+                    </div>
+                  )}
+                  {/* WhatsApp sem criativo (só legenda) */}
+                  {!singleUrl && !(c.media_urls?.length) && c.caption && (
+                    <div className="px-4 pb-2">
+                      <WhatsAppShareButton caption={c.caption} />
                     </div>
                   )}
 
@@ -241,6 +260,88 @@ export default async function PublicApprovalPage({ params }: Props) {
                 </article>
               )
             })}
+
+            {/* ── Publicações já aprovadas ── */}
+            {approved.length > 0 && (
+              <>
+                <div className="px-4 py-3 border-b border-zinc-800 border-t mt-4">
+                  <p className="text-zinc-400 text-sm flex items-center gap-2">
+                    <span className="text-green-400">✓</span>
+                    <span><span className="text-white font-medium">{approved.length}</span> publicação{approved.length > 1 ? 'ões' : ''} aprovada{approved.length > 1 ? 's' : ''}</span>
+                  </p>
+                </div>
+
+                {approved.map((c, i) => {
+                  const isReel = c.type === 'reel'
+                  const isCarousel = c.type === 'carrossel' && c.media_urls && c.media_urls.length > 0
+                  const singleUrl = c.generated_image_url ?? null
+
+                  return (
+                    <article key={c.id} className={`border-b border-zinc-800 opacity-75 ${i > 0 ? 'mt-2' : ''}`}>
+                      {/* Header com badge aprovado */}
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {initials}
+                          </div>
+                          <div>
+                            <p className="text-white text-sm font-semibold leading-tight">{client.name}</p>
+                            <p className="text-zinc-500 text-xs">{TYPE_EMOJI[c.type] || '📄'} {TYPE_LABEL[c.type]}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {c.scheduled_date && (
+                            <span className="text-zinc-500 text-xs">{formatDate(c.scheduled_date)}</span>
+                          )}
+                          <span className="flex items-center gap-1 text-xs font-medium text-green-400 bg-green-950/40 border border-green-800/50 rounded-full px-2.5 py-0.5">
+                            ✓ Aprovado
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Criativo */}
+                      {isCarousel ? (
+                        <MediaCarousel urls={c.media_urls!} />
+                      ) : isReel && singleUrl ? (
+                        <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
+                          <iframe src={getDriveEmbedUrl(singleUrl)!} allow="autoplay; fullscreen" allowFullScreen
+                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }} />
+                        </div>
+                      ) : singleUrl ? (
+                        <div className="w-full bg-zinc-900" style={{ aspectRatio: '4/5' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={resolveImageUrl(singleUrl)!} alt={c.title} className="w-full h-full object-cover" />
+                        </div>
+                      ) : null}
+
+                      {/* Caption */}
+                      {c.caption && (
+                        <div className="px-4 pt-3 pb-1 space-y-2">
+                          <p className="text-sm text-white leading-relaxed">
+                            <span className="font-semibold">{client.name} </span>
+                            <span className="text-zinc-300 whitespace-pre-wrap">{c.caption}</span>
+                          </p>
+                          <div className="flex gap-2 pt-1 flex-wrap">
+                            <CopyCaptionButton caption={c.caption} />
+                            {(singleUrl || (c.media_urls?.length ?? 0) > 0) && (
+                              <DownloadButton
+                                urls={isCarousel ? c.media_urls! : [singleUrl!]}
+                                label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
+                              />
+                            )}
+                          </div>
+                          <WhatsAppShareButton
+                            caption={c.caption}
+                            imageUrl={getDownloadUrl(singleUrl)}
+                          />
+                        </div>
+                      )}
+                      <div className="pb-3" />
+                    </article>
+                  )
+                })}
+              </>
+            )}
           </>
         )}
       </div>
