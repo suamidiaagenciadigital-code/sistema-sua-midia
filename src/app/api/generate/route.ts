@@ -85,12 +85,14 @@ ${typeInstructions[type] || ''}
 Responda EXATAMENTE neste JSON:
 {
   "title": "título resumido do conteúdo",
-  "caption": "copy/legenda completa com emojis e hashtags",
+  "caption": "copy/legenda completa com emojis e NO MÁXIMO 5 hashtags relevantes",
   "script": "roteiro detalhado (para reels) ou estrutura de slides (para carrosseis) — null para imagem/story",
   "image_prompt": "prompt em inglês para geração de imagem com identidade visual do cliente",
   "cta": "call to action específico",
   "partner_mentioned": "nome do parceiro se relevante — null se não houver"
-}`
+}
+
+REGRA OBRIGATÓRIA: a legenda deve ter NO MÁXIMO 5 hashtags. Priorize as mais relevantes e de maior alcance para o nicho.`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5',

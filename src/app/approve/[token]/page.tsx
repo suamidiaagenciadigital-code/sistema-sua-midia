@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { TYPE_LABEL } from '@/lib/content-status'
 import ApprovalActions from './approval-actions'
 import { MediaCarousel } from './media-carousel'
+import { CopyCaptionButton } from './copy-caption-button'
 
 interface Props {
   params: Promise<{ token: string }>
@@ -195,13 +196,18 @@ export default async function PublicApprovalPage({ params }: Props) {
                   )}
 
                   {/* Caption */}
-                  <div className="px-4 pt-3 pb-1 space-y-1">
+                  <div className="px-4 pt-3 pb-1 space-y-2">
                     <p className="text-sm text-white leading-relaxed">
                       <span className="font-semibold">{client.name} </span>
                       <span className="text-zinc-300 whitespace-pre-wrap">{c.caption}</span>
                     </p>
                     {c.title && c.title !== c.caption && (
                       <p className="text-zinc-500 text-xs font-medium">{c.title}</p>
+                    )}
+                    {c.caption && (
+                      <div className="pt-1">
+                        <CopyCaptionButton caption={c.caption} />
+                      </div>
                     )}
                   </div>
 
