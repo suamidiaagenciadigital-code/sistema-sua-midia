@@ -175,7 +175,7 @@ export async function scheduleOnSocialMedia(params: ScheduleParams): Promise<Soc
     caption,
     imageUrl: rawImageUrl,
     scheduledDate,
-    scheduledTime = '09:00',
+    scheduledTime = '11:00',
   } = params
 
   const scheduledTimestamp = toUtcTimestamp(scheduledDate, scheduledTime)
