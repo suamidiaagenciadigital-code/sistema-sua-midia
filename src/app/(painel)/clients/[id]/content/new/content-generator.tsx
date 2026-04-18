@@ -277,7 +277,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         client_id: clientId,
         type,
         scheduled_date: scheduledDate || null,
-        status: 'draft',
+        status: 'pending_my_approval',
         ...edited,
         generated_image_url: type !== 'carrossel' && creativeUrl.trim() ? creativeUrl.trim() : null,
         media_urls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : null,

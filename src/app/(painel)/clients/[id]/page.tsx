@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { updateClientAction } from './actions'
 import { DeleteClientButton } from './delete-button'
 import { DispatchApprovalButton } from './dispatch-approval-button'
-import { ChevronLeft, Sparkles } from 'lucide-react'
+import { ChevronLeft, Sparkles, Plug } from 'lucide-react'
 import { Client } from '@/lib/types'
 import { ImportClientProfileButton } from '../import-profile-button'
 
@@ -163,6 +163,29 @@ export default async function ClientPage({ params }: Props) {
       </form>
 
       <DispatchApprovalButton clientId={id} approvalToken={c.approval_token ?? null} />
+
+      {/* Integrações Meta */}
+      <Link
+        href={`/clients/${id}/integrations`}
+        className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 px-5 py-4 hover:border-zinc-600 hover:bg-zinc-800/50 transition-colors group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-zinc-800 group-hover:bg-zinc-700 flex items-center justify-center transition-colors">
+            <Plug className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">Integrações — Meta Business</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {(c.facebook_page_id && c.instagram_account_id)
+                ? '✓ Facebook e Instagram configurados'
+                : c.facebook_page_id
+                ? '✓ Facebook · Instagram pendente'
+                : 'Facebook e Instagram não configurados'}
+            </p>
+          </div>
+        </div>
+        <ChevronLeft className="h-4 w-4 text-zinc-500 rotate-180" />
+      </Link>
 
       {/* Zona de perigo */}
       <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-5 space-y-3">

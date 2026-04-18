@@ -35,6 +35,9 @@ export async function updateClientAction(id: string, formData: FormData) {
     visual_mandatory: formData.get('visual_mandatory') as string || null,
     visual_forbidden: formData.get('visual_forbidden') as string || null,
     status: formData.get('status') as string || 'ativo',
+    facebook_page_id: formData.get('facebook_page_id') as string || null,
+    facebook_page_token: formData.get('facebook_page_token') as string || null,
+    instagram_account_id: formData.get('instagram_account_id') as string || null,
   }
 
   await supabase.from('clients').update(data).eq('id', id)

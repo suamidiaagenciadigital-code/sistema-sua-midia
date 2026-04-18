@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, MessageSquare, Send, X } from 'lucide-react'
+import { CheckCircle2, MessageSquare, Send, X, Calendar } from 'lucide-react'
 
 interface Props {
   contentId: string
@@ -10,26 +10,56 @@ interface Props {
 
 export default function ApprovalActions({ contentId, token }: Props) {
   const [done, setDone] = useState<'approved' | 'revision' | null>(null)
+  const [social, setSocial] = useState<{ facebook: boolean; instagram: boolean } | null>(null)
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
 
   const act = async (status: string, revisionNotes?: string) => {
     setLoading(true)
-    await fetch('/api/public-approval', {
+    const res = await fetch('/api/public-approval', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ contentId, token, status, revisionNotes }),
     })
-    setDone(status === 'approved_by_client' ? 'approved' : 'revision')
+    const data = await res.json() as {
+      ok: boolean
+      social?: {
+        facebook: { scheduled: boolean; error?: string }
+        instagram: { scheduled: boolean; error?: string }
+      }
+    }
+
+    if (status === 'approved_by_client') {
+      setDone('approved')
+      setSocial({
+        facebook: data.social?.facebook.scheduled ?? false,
+        instagram: data.social?.instagram.scheduled ?? false,
+      })
+    } else {
+      setDone('revision')
+    }
     setLoading(false)
   }
 
   if (done === 'approved') {
     return (
-      <div className="flex items-center gap-2 py-2">
-        <CheckCircle2 className="h-5 w-5 text-green-500" />
-        <span className="text-sm text-green-400 font-medium">Aprovado! A agência foi notificada.</span>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 py-1">
+          <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+          <span className="text-sm text-green-400 font-medium">Aprovado! A agência foi notificada.</span>
+        </div>
+        {social && (social.facebook || social.instagram) && (
+          <div className="flex items-center gap-2 py-1">
+            <Calendar className="h-4 w-4 text-blue-400 shrink-0" />
+            <span className="text-xs text-blue-300">
+              Agendado automaticamente em:{' '}
+              {[social.facebook && 'Facebook', social.instagram && 'Instagram']
+                .filter(Boolean)
+                .join(' e ')}
+            </span>
+          </div>
+        )}
       </div>
     )
   }

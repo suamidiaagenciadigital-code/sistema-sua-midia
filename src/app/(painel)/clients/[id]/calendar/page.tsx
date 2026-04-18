@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import { STATUS_DOT, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
 import { DispatchApprovalButton } from '../dispatch-approval-button'
 import { ImportCalendarButton } from './import-calendar-button'
+import { DraggableCalendar } from './draggable-calendar'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -52,14 +53,6 @@ export default async function CalendarPage({ params, searchParams }: Props) {
     .is('scheduled_date', null)
     .order('created_at', { ascending: false })
 
-  // Montar mapa dia → conteúdos
-  const byDay: Record<number, typeof contents> = {}
-  for (const c of contents ?? []) {
-    const day = new Date(c.scheduled_date + 'T12:00:00').getDate()
-    if (!byDay[day]) byDay[day] = []
-    byDay[day]!.push(c)
-  }
-
   // Navegação de mês
   const prevMonth = month === 1 ? 12 : month - 1
   const prevYear = month === 1 ? year - 1 : year
@@ -69,7 +62,6 @@ export default async function CalendarPage({ params, searchParams }: Props) {
   // Gerar dias do calendário
   const firstWeekday = new Date(year, month - 1, 1).getDay() // 0=dom
   const daysInMonth = new Date(year, month, 0).getDate()
-  const today = new Date()
 
   const monthName = new Date(year, month - 1, 1).toLocaleString('pt-BR', { month: 'long' })
 
@@ -123,85 +115,22 @@ export default async function CalendarPage({ params, searchParams }: Props) {
         ))}
       </div>
 
-      {/* Grade do calendário */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
-        {/* Cabeçalho dos dias da semana */}
-        <div className="grid grid-cols-7 border-b border-zinc-800">
-          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
-            <div key={d} className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase tracking-wide">
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* Dias */}
-        <div className="grid grid-cols-7">
-          {/* Células vazias antes do primeiro dia */}
-          {Array.from({ length: firstWeekday }).map((_, i) => (
-            <div key={`empty-${i}`} className="min-h-24 border-b border-r border-zinc-800 bg-zinc-950/30 p-1" />
-          ))}
-
-          {/* Dias do mês */}
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const day = i + 1
-            const dayContents = byDay[day] ?? []
-            const isToday =
-              today.getDate() === day &&
-              today.getMonth() + 1 === month &&
-              today.getFullYear() === year
-            const col = (firstWeekday + i) % 7
-            const isLastCol = col === 6
-
-            return (
-              <div
-                key={day}
-                className={`min-h-24 border-b border-r border-zinc-800 p-1.5 ${isLastCol ? 'border-r-0' : ''} ${isToday ? 'bg-zinc-800/50' : ''}`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full ${
-                    isToday ? 'bg-white text-zinc-900' : 'text-zinc-400'
-                  }`}>
-                    {day}
-                  </span>
-                  <Link
-                    href={`/clients/${id}/content/new`}
-                    className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-300 transition-colors"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Link>
-                </div>
-
-                <div className="space-y-0.5">
-                  {dayContents.map((c: any) => (
-                    <Link
-                      key={c.id}
-                      href={`/clients/${id}/content/${c.id}`}
-                      className="flex items-center gap-1 rounded px-1 py-0.5 hover:bg-zinc-700/50 transition-colors group/card"
-                    >
-                      <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_DOT[c.status as ContentStatus] ?? 'bg-zinc-500'}`} />
-                      <span className="text-xs text-zinc-300 truncate leading-tight">
-                        {TYPE_ICON[c.type]} {c.title}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-
-          {/* Células vazias depois do último dia */}
-          {Array.from({ length: (7 - ((firstWeekday + daysInMonth) % 7)) % 7 }).map((_, i) => (
-            <div key={`end-${i}`} className="min-h-24 border-b border-r border-zinc-800 bg-zinc-950/30 p-1 last:border-r-0" />
-          ))}
-        </div>
-      </div>
+      {/* Grade do calendário (drag & drop) */}
+      <DraggableCalendar
+        clientId={id}
+        year={year}
+        month={month}
+        contents={contents ?? []}
+        firstWeekday={firstWeekday}
+        daysInMonth={daysInMonth}
+      />
 
       {/* Rascunhos sem data */}
       {(undated?.length ?? 0) > 0 && (
         <div className="rounded-lg border border-amber-900/40 bg-amber-950/10 overflow-hidden">
           <div className="px-5 py-3 border-b border-amber-900/30 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-amber-300">
-              📋 Rascunhos sem data ({undated!.length})
+              📋 Conteúdos sem data ({undated!.length})
             </h2>
             <p className="text-xs text-amber-700">Defina uma data para aparecerem no calendário</p>
           </div>

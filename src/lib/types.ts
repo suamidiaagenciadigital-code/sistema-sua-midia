@@ -51,6 +51,9 @@ export interface Client {
   status: ClientStatus
   whatsapp_group_jid?: string | null
   approval_token?: string | null
+  facebook_page_id?: string | null
+  facebook_page_token?: string | null
+  instagram_account_id?: string | null
   created_at: string
   updated_at: string
 }

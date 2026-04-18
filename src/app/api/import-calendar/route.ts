@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     .filter(c => c.title && validTypes.includes(c.type))
     .map(c => ({
       client_id: clientId,
-      status: 'draft',
+      status: 'pending_my_approval',
       title: c.title,
       type: c.type,
       caption: c.caption ?? null,
