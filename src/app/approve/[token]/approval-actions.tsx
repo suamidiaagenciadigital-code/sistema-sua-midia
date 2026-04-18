@@ -10,7 +10,7 @@ interface Props {
 
 export default function ApprovalActions({ contentId, token }: Props) {
   const [done, setDone] = useState<'approved' | 'revision' | null>(null)
-  const [social, setSocial] = useState<{ facebook: boolean; instagram: boolean } | null>(null)
+  const [social, setSocial] = useState<{ facebook: boolean; instagram: boolean; fbError?: string; igError?: string } | null>(null)
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
@@ -35,6 +35,8 @@ export default function ApprovalActions({ contentId, token }: Props) {
       setSocial({
         facebook: data.social?.facebook.scheduled ?? false,
         instagram: data.social?.instagram.scheduled ?? false,
+        fbError: data.social?.facebook.error,
+        igError: data.social?.instagram.error,
       })
     } else {
       setDone('revision')
@@ -58,6 +60,16 @@ export default function ApprovalActions({ contentId, token }: Props) {
                 .filter(Boolean)
                 .join(' e ')}
             </span>
+          </div>
+        )}
+        {social && !social.facebook && social.fbError && (
+          <div className="py-1">
+            <span className="text-xs text-red-400">⚠ Facebook: {social.fbError}</span>
+          </div>
+        )}
+        {social && !social.instagram && social.igError && (
+          <div className="py-1">
+            <span className="text-xs text-red-400">⚠ Instagram: {social.igError}</span>
           </div>
         )}
       </div>
