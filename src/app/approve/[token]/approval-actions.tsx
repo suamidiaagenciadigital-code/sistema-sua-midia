@@ -63,13 +63,19 @@ export default function ApprovalActions({ contentId, token }: Props) {
           </div>
         )}
         {social && !social.facebook && social.fbError && (
-          <div className="py-1">
-            <span className="text-xs text-red-400">⚠ Facebook: {social.fbError}</span>
+          <div className="flex items-center gap-2 py-1">
+            <Calendar className="h-4 w-4 text-zinc-500 shrink-0" />
+            <span className="text-xs text-zinc-400">
+              Facebook: será publicado manualmente pela agência.
+            </span>
           </div>
         )}
         {social && !social.instagram && social.igError && (
-          <div className="py-1">
-            <span className="text-xs text-red-400">⚠ Instagram: {social.igError}</span>
+          <div className="flex items-center gap-2 py-1">
+            <Calendar className="h-4 w-4 text-zinc-500 shrink-0" />
+            <span className="text-xs text-zinc-400">
+              Instagram: será publicado manualmente pela agência.
+            </span>
           </div>
         )}
       </div>
