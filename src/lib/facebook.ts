@@ -160,6 +160,24 @@ async function scheduleInstagram(params: {
   }
 }
 
+// ── Page Token ────────────────────────────────────────────────────────────
+
+/**
+ * Troca um System User Token pelo Page Access Token da página.
+ * Necessário para agendar posts com published=false no Facebook/Instagram.
+ * Retorna o token original como fallback em caso de erro.
+ */
+async function fetchPageAccessToken(pageId: string, userToken: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `${GRAPH}/${pageId}?fields=access_token&access_token=${userToken}`
+    )
+    const data = await res.json() as { access_token?: string; error?: { message: string } }
+    if (data.access_token) return data.access_token
+  } catch {}
+  return userToken
+}
+
 // ── Função principal ───────────────────────────────────────────────────────
 
 /**
@@ -193,11 +211,14 @@ export async function scheduleOnSocialMedia(params: ScheduleParams): Promise<Soc
   // Resolver URL pública (converte Google Drive se necessário)
   const publicImageUrl = resolvePublicImageUrl(rawImageUrl)
 
+  // Trocar System User Token pelo Page Access Token (obrigatório para agendar posts)
+  const actualPageToken = await fetchPageAccessToken(pageId, pageToken)
+
   // Executar em paralelo
   const [fbResult, igResult] = await Promise.all([
     scheduleFacebook({
       pageId,
-      pageToken,
+      pageToken: actualPageToken,
       caption,
       imageUrl: publicImageUrl,
       scheduledTimestamp,
@@ -205,7 +226,7 @@ export async function scheduleOnSocialMedia(params: ScheduleParams): Promise<Soc
     instagramAccountId && publicImageUrl
       ? scheduleInstagram({
           igAccountId: instagramAccountId,
-          pageToken,
+          pageToken: actualPageToken,
           caption,
           imageUrl: publicImageUrl,
           scheduledTimestamp,
