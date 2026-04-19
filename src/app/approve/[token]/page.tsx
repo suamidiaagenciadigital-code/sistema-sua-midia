@@ -110,11 +110,11 @@ export default async function PublicApprovalPage({ params }: Props) {
     .from('contents')
     .select('id, title, type, caption, script, cta, scheduled_date, status, revision_notes, generated_image_url, media_urls')
     .eq('client_id', client.id)
-    .in('status', ['sent_to_client', 'approved_by_client'])
+    .in('status', ['sent_to_client', 'approved_by_client', 'published'])
     .order('scheduled_date', { ascending: true })
 
   const pending  = (contents ?? []).filter(c => c.status === 'sent_to_client')
-  const approved = (contents ?? []).filter(c => c.status === 'approved_by_client')
+  const approved = (contents ?? []).filter(c => c.status === 'approved_by_client' || c.status === 'published')
 
   const initials = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
