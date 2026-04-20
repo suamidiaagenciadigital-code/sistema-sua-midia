@@ -241,3 +241,140 @@ export async function scheduleOnSocialMedia(params: ScheduleParams): Promise<Soc
 
   return { facebook: fbResult, instagram: igResult }
 }
+
+// ── Stories ────────────────────────────────────────────────────────────────
+
+interface StoryParams {
+  pageId: string
+  pageToken: string
+  igAccountId?: string | null
+  mediaUrl: string
+  mediaType: 'image' | 'video'
+  scheduledDate: string
+  scheduledTime?: string
+  platforms: { facebook: boolean; instagram: boolean }
+}
+
+/**
+ * Agenda um story no Instagram (como story real) e/ou Facebook (como post agendado).
+ * - Instagram: usa media_type=STORIES com scheduled_publish_time
+ * - Facebook: agenda como post de imagem (API não suporta story agendado)
+ */
+export async function scheduleStory(params: StoryParams): Promise<SocialScheduleResult> {
+  const {
+    pageId,
+    pageToken,
+    igAccountId,
+    mediaUrl,
+    mediaType,
+    scheduledDate,
+    scheduledTime = '09:00',
+    platforms,
+  } = params
+
+  const scheduledTimestamp = toUtcTimestamp(scheduledDate, scheduledTime)
+  const now = Math.floor(Date.now() / 1000)
+
+  if (scheduledTimestamp < now + 600) {
+    const msg = 'Data de agendamento deve ser pelo menos 10 minutos no futuro'
+    return {
+      facebook:  { post_id: null, error: msg },
+      instagram: { post_id: null, error: msg },
+    }
+  }
+
+  const publicUrl = resolvePublicImageUrl(mediaUrl)
+  if (!publicUrl) {
+    return {
+      facebook:  { post_id: null, error: 'URL de mídia inválida' },
+      instagram: { post_id: null, error: 'URL de mídia inválida' },
+    }
+  }
+
+  const actualPageToken = await fetchPageAccessToken(pageId, pageToken)
+
+  const [fbResult, igResult] = await Promise.all([
+    // Facebook: agenda como post de imagem (stories agendados não são suportados via API)
+    platforms.facebook
+      ? scheduleFacebook({
+          pageId,
+          pageToken: actualPageToken,
+          caption: '',
+          imageUrl: publicUrl,
+          scheduledTimestamp,
+        })
+      : Promise.resolve({ post_id: null, error: null }),
+
+    // Instagram: agenda como story real
+    platforms.instagram && igAccountId
+      ? scheduleInstagramStory({
+          igAccountId,
+          pageToken: actualPageToken,
+          mediaUrl: publicUrl,
+          mediaType,
+          scheduledTimestamp,
+        })
+      : Promise.resolve({ post_id: null, error: null }),
+  ])
+
+  return { facebook: fbResult, instagram: igResult }
+}
+
+async function scheduleInstagramStory(params: {
+  igAccountId: string
+  pageToken: string
+  mediaUrl: string
+  mediaType: 'image' | 'video'
+  scheduledTimestamp: number
+}): Promise<{ post_id: string | null; error: string | null }> {
+  const { igAccountId, pageToken, mediaUrl, mediaType, scheduledTimestamp } = params
+
+  try {
+    const containerBody = new URLSearchParams({
+      media_type:             'STORIES',
+      published:              'false',
+      scheduled_publish_time: String(scheduledTimestamp),
+      access_token:           pageToken,
+    })
+
+    if (mediaType === 'video') {
+      containerBody.append('video_url', mediaUrl)
+    } else {
+      containerBody.append('image_url', mediaUrl)
+    }
+
+    const containerRes = await fetch(`${GRAPH}/${igAccountId}/media`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    containerBody.toString(),
+    })
+    const containerData = await containerRes.json() as { id?: string; error?: { message: string } }
+
+    if (!containerRes.ok || containerData.error) {
+      return { post_id: null, error: containerData.error?.message ?? 'Erro ao criar container de story' }
+    }
+
+    const creationId = containerData.id
+    if (!creationId) return { post_id: null, error: 'Instagram não retornou creation_id para o story' }
+
+    const publishBody = new URLSearchParams({
+      creation_id:  creationId,
+      access_token: pageToken,
+    })
+
+    const publishRes = await fetch(`${GRAPH}/${igAccountId}/media_publish`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    publishBody.toString(),
+    })
+    const publishData = await publishRes.json() as { id?: string; error?: { message: string } }
+
+    if (!publishRes.ok || publishData.error) {
+      return { post_id: null, error: publishData.error?.message ?? 'Erro ao publicar story no Instagram' }
+    }
+
+    return { post_id: publishData.id ?? creationId, error: null }
+  } catch (err) {
+    return { post_id: null, error: `Falha na requisição ao Instagram Stories: ${(err as Error).message}` }
+  }
+}
