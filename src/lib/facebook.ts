@@ -256,9 +256,55 @@ interface StoryParams {
 }
 
 /**
- * Agenda um story no Instagram (como story real) e/ou Facebook (como post agendado).
- * - Instagram: usa media_type=STORIES com scheduled_publish_time
- * - Facebook: agenda como post de imagem (API não suporta story agendado)
+ * Publica um story no Facebook imediatamente.
+ * A API do Facebook NÃO suporta agendamento de stories — publicação é sempre imediata.
+ * - Imagem: POST /{page-id}/photo_stories
+ * - Vídeo:  POST /{page-id}/video_stories
+ *
+ * Docs: https://developers.facebook.com/docs/pages/publishing#stories
+ */
+async function publishFacebookStory(params: {
+  pageId: string
+  pageToken: string
+  mediaUrl: string
+  mediaType: 'image' | 'video'
+}): Promise<{ post_id: string | null; error: string | null }> {
+  const { pageId, pageToken, mediaUrl, mediaType } = params
+
+  const endpoint = mediaType === 'video'
+    ? `${GRAPH}/${pageId}/video_stories`
+    : `${GRAPH}/${pageId}/photo_stories`
+
+  const body = new URLSearchParams({ access_token: pageToken })
+
+  if (mediaType === 'video') {
+    body.append('file_url', mediaUrl)
+    body.append('upload_phase', 'finish')
+  } else {
+    body.append('url', mediaUrl)
+  }
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    })
+    const data = await res.json() as { post_id?: string; success?: boolean; error?: { message: string } }
+
+    if (!res.ok || data.error) {
+      return { post_id: null, error: data.error?.message ?? 'Erro ao publicar story no Facebook' }
+    }
+    return { post_id: data.post_id ?? null, error: null }
+  } catch (err) {
+    return { post_id: null, error: `Falha na requisição ao Facebook Stories: ${(err as Error).message}` }
+  }
+}
+
+/**
+ * Publica um story no Facebook e/ou agenda no Instagram.
+ * - Facebook: publica IMEDIATAMENTE via photo_stories / video_stories (sem suporte a agendamento)
+ * - Instagram: agenda como story real com scheduled_publish_time
  */
 export async function scheduleStory(params: StoryParams): Promise<SocialScheduleResult> {
   const {
@@ -272,17 +318,6 @@ export async function scheduleStory(params: StoryParams): Promise<SocialSchedule
     platforms,
   } = params
 
-  const scheduledTimestamp = toUtcTimestamp(scheduledDate, scheduledTime)
-  const now = Math.floor(Date.now() / 1000)
-
-  if (scheduledTimestamp < now + 600) {
-    const msg = 'Data de agendamento deve ser pelo menos 10 minutos no futuro'
-    return {
-      facebook:  { post_id: null, error: msg },
-      instagram: { post_id: null, error: msg },
-    }
-  }
-
   const publicUrl = resolvePublicImageUrl(mediaUrl)
   if (!publicUrl) {
     return {
@@ -293,27 +328,33 @@ export async function scheduleStory(params: StoryParams): Promise<SocialSchedule
 
   const actualPageToken = await fetchPageAccessToken(pageId, pageToken)
 
+  // Instagram ainda precisa de timestamp futuro para agendamento
+  const scheduledTimestamp = toUtcTimestamp(scheduledDate, scheduledTime)
+  const now = Math.floor(Date.now() / 1000)
+  const igTimestampValid = scheduledTimestamp >= now + 600
+
   const [fbResult, igResult] = await Promise.all([
-    // Facebook: agenda como post de imagem (stories agendados não são suportados via API)
+    // Facebook: publica imediatamente (API não suporta agendamento de stories)
     platforms.facebook
-      ? scheduleFacebook({
+      ? publishFacebookStory({
           pageId,
           pageToken: actualPageToken,
-          caption: '',
-          imageUrl: publicUrl,
-          scheduledTimestamp,
+          mediaUrl: publicUrl,
+          mediaType,
         })
       : Promise.resolve({ post_id: null, error: null }),
 
     // Instagram: agenda como story real
     platforms.instagram && igAccountId
-      ? scheduleInstagramStory({
-          igAccountId,
-          pageToken: actualPageToken,
-          mediaUrl: publicUrl,
-          mediaType,
-          scheduledTimestamp,
-        })
+      ? igTimestampValid
+        ? scheduleInstagramStory({
+            igAccountId,
+            pageToken: actualPageToken,
+            mediaUrl: publicUrl,
+            mediaType,
+            scheduledTimestamp,
+          })
+        : Promise.resolve({ post_id: null, error: 'Data de agendamento deve ser pelo menos 10 minutos no futuro' })
       : Promise.resolve({ post_id: null, error: null }),
   ])
 

@@ -40,7 +40,7 @@ export default async function NewStoryPage({ params }: Props) {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-white">Publicar Story</h1>
-          <p className="text-zinc-400 text-sm mt-0.5">{client.name} · sem aprovação do cliente</p>
+          <p className="text-zinc-400 text-sm mt-0.5">{client.name} · publicação direta, sem aprovação</p>
         </div>
       </div>
 
@@ -126,9 +126,18 @@ export default async function NewStoryPage({ params }: Props) {
             </label>
           </div>
           <p className="text-xs text-zinc-500">
-            Instagram agenda como story · Facebook agenda como post de imagem
+            Instagram agenda o story para a data escolhida · Facebook publica o story <strong className="text-zinc-400">imediatamente</strong> (a API não suporta agendamento de stories)
           </p>
         </div>
+
+        {/* Aviso Facebook imediato */}
+        {hasFacebook && (
+          <div className="rounded-lg border border-amber-800/50 bg-amber-950/30 px-4 py-3">
+            <p className="text-xs text-amber-400 leading-relaxed">
+              ⚡ <strong>Facebook Stories são publicados imediatamente</strong> — a Meta não permite agendar stories pelo Facebook. Ao confirmar, o story do Facebook vai ao ar na hora. O Instagram segue a data e horário escolhidos.
+            </p>
+          </div>
+        )}
 
         {/* Botões */}
         <div className="flex gap-3 pt-2">
@@ -136,7 +145,7 @@ export default async function NewStoryPage({ params }: Props) {
             type="submit"
             className="rounded-md bg-white px-6 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors"
           >
-            Agendar story
+            Publicar / Agendar story
           </button>
           <Link
             href={`/clients/${id}`}
