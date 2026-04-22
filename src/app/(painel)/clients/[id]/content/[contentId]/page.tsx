@@ -29,7 +29,7 @@ export default async function ContentDetailPage({ params }: Props) {
   const del = deleteContentAction.bind(null, id, contentId)
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -68,7 +68,7 @@ export default async function ContentDetailPage({ params }: Props) {
       </div>
 
       {/* Edição do conteúdo */}
-      <ContentEditForm clientId={id} contentId={contentId} content={content} />
+      <ContentEditForm clientId={id} clientName={client?.name ?? ''} contentId={contentId} content={content} />
 
       {/* Links rápidos */}
       <div className="flex gap-3">
