@@ -3,7 +3,10 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2, PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays } from 'lucide-react'
+import {
+  ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2,
+  PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays,
+} from 'lucide-react'
 
 interface Generated {
   title: string
@@ -36,9 +39,151 @@ const contentTypes = [
   { value: 'story',     label: 'Story',     desc: 'Conteúdo efêmero' },
 ]
 
+const TYPE_EMOJI: Record<string, string> = {
+  reel: '🎬', carrossel: '🗂️', imagem: '📷', story: '📲',
+}
+
 const base = "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500"
 
-// ── Componentes de cenas/cards ────────────────────────────────
+// Resolve Google Drive URL para exibição direta
+function resolveImageUrl(url: string): string {
+  const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([^/?&]+)/)
+  if (match) return `https://lh3.googleusercontent.com/d/${match[1]}`
+  return url
+}
+
+// Resolve Google Drive URL para embed de vídeo
+function getDriveEmbedUrl(url: string): string {
+  const match = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/)
+  if (match) return `https://drive.google.com/file/d/${match[1]}/preview`
+  return url
+}
+
+// ── Preview Panel ─────────────────────────────────────────────
+
+function PreviewPanel({
+  clientName,
+  type,
+  caption,
+  title,
+  creativeUrl,
+  mediaUrlsText,
+}: {
+  clientName: string
+  type: string
+  caption: string
+  title: string
+  creativeUrl: string
+  mediaUrlsText: string
+}) {
+  const initials = clientName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const hasContent = caption.trim() || creativeUrl.trim() || title.trim()
+
+  const isReel = type === 'reel'
+  const isCarousel = type === 'carrossel'
+  const mediaUrls = isCarousel
+    ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
+    : []
+
+  const [activeSlide, setActiveSlide] = useState(0)
+
+  return (
+    <div className="sticky top-6 space-y-3">
+      <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Preview</p>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+        {!hasContent ? (
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center space-y-3">
+            <span className="text-3xl opacity-30">{TYPE_EMOJI[type] ?? '📄'}</span>
+            <p className="text-zinc-600 text-xs">Preencha os campos ao lado para ver o preview</p>
+          </div>
+        ) : (
+          <>
+            {/* Post header */}
+            <div className="flex items-center gap-2.5 px-3 py-3 border-b border-zinc-800">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-white text-xs font-semibold leading-tight truncate">{clientName}</p>
+                <p className="text-zinc-500 text-[11px]">{TYPE_EMOJI[type]} {type}</p>
+              </div>
+            </div>
+
+            {/* Mídia */}
+            {isCarousel && mediaUrls.length > 0 ? (
+              <div>
+                <div className="w-full bg-zinc-800" style={{ aspectRatio: '4/5' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={resolveImageUrl(mediaUrls[activeSlide] ?? '')}
+                    alt={`Slide ${activeSlide + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                {mediaUrls.length > 1 && (
+                  <div className="flex items-center justify-center gap-1.5 py-2">
+                    {mediaUrls.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setActiveSlide(i)}
+                        className={`rounded-full transition-all ${i === activeSlide ? 'w-2 h-2 bg-white' : 'w-1.5 h-1.5 bg-zinc-600 hover:bg-zinc-400'}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : isReel && creativeUrl.trim() ? (
+              <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
+                <iframe
+                  src={getDriveEmbedUrl(creativeUrl)}
+                  allow="autoplay; fullscreen"
+                  allowFullScreen
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                />
+              </div>
+            ) : creativeUrl.trim() ? (
+              <div className="w-full bg-zinc-800" style={{ aspectRatio: '4/5' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolveImageUrl(creativeUrl)}
+                  alt={title || 'Preview'}
+                  className="w-full h-full object-cover"
+                  onError={e => {
+                    (e.target as HTMLImageElement).style.display = 'none'
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="w-full bg-zinc-800 flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '4/5' }}>
+                <span className="text-4xl opacity-20">{TYPE_EMOJI[type] ?? '📄'}</span>
+                <p className="text-zinc-600 text-xs">Nenhuma mídia anexada</p>
+              </div>
+            )}
+
+            {/* Caption */}
+            {(caption || title) && (
+              <div className="px-3 pt-3 pb-4 space-y-1">
+                {caption ? (
+                  <p className="text-xs text-white leading-relaxed">
+                    <span className="font-semibold">{clientName} </span>
+                    <span className="text-zinc-300 whitespace-pre-wrap">{caption}</span>
+                  </p>
+                ) : title ? (
+                  <p className="text-xs text-zinc-400 italic">{title}</p>
+                ) : null}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <p className="text-[11px] text-zinc-600 text-center">Preview atualiza em tempo real</p>
+    </div>
+  )
+}
+
+// ── Scenes / Cards editors ────────────────────────────────────
 
 function ScenesEditor({ scenes, setScenes }: { scenes: ReelScene[]; setScenes: (s: ReelScene[]) => void }) {
   const add = () => setScenes([...scenes, { scene: scenes.length + 1, visual_prompt: '', narration: '' }])
@@ -163,22 +308,16 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
-  // Conteúdo gerado / editado (ambos os modos)
   const [edited, setEdited] = useState<Generated | null>(null)
   const [scheduledDate, setScheduledDate] = useState('')
-
-  // URL do criativo
   const [creativeUrl, setCreativeUrl] = useState('')
   const [mediaUrlsText, setMediaUrlsText] = useState('')
-
-  // Estado das cenas/cards
   const [scenes, setScenes] = useState<ReelScene[]>([])
   const [cards, setCards] = useState<CarouselCard[]>([])
   const [showPrompts, setShowPrompts] = useState(false)
   const [importError, setImportError] = useState('')
   const importRef = useRef<HTMLInputElement>(null)
 
-  // Manual: inicializar campos vazios
   const initManual = () => {
     setEdited({ title: '', caption: '', script: null, image_prompt: '', cta: '', partner_mentioned: null })
     setScenes([])
@@ -196,7 +335,6 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     else { setEdited(null); setCreativeUrl(''); setMediaUrlsText('') }
   }
 
-  // Import de conteúdo único via JSON
   const importFromFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -268,7 +406,6 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     setSaving(true)
     setError('')
     try {
-      // URL do criativo
       const mediaUrls = type === 'carrossel'
         ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
         : null
@@ -294,7 +431,6 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         throw new Error(err.error ?? 'Erro ao salvar')
       }
       setSaved(true)
-      // Redirecionar para o calendário após 1.5s
       setTimeout(() => {
         router.push(`/clients/${clientId}/calendar`)
       }, 1500)
@@ -325,7 +461,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
   )
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -346,191 +482,208 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         </Link>
       </div>
 
-      {/* Modo: IA ou Manual */}
-      <div className="flex gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
-        <button type="button" onClick={() => switchMode('ai')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
-            mode === 'ai' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
-          }`}>
-          <Sparkles className="h-4 w-4" /> Gerar com IA
-        </button>
-        <button type="button" onClick={() => switchMode('manual')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
-            mode === 'manual' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
-          }`}>
-          <PenLine className="h-4 w-4" /> Criar manualmente
-        </button>
-      </div>
+      {/* Layout: form + preview */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 items-start">
 
-      {/* Tipo de conteúdo + controles de geração */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Tipo de conteúdo</label>
-          <div className="grid grid-cols-4 gap-2">
-            {contentTypes.map(ct => (
-              <button key={ct.value} type="button" onClick={() => {
-                setType(ct.value)
-                setScenes([])
-                setCards([])
-                setCreativeUrl('')
-                setMediaUrlsText('')
-              }}
-                className={`rounded-md border p-3 text-left transition-colors ${
-                  type === ct.value ? 'border-white bg-zinc-700 text-white' : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
-                }`}>
-                <div className="text-sm font-medium">{ct.label}</div>
-                <div className="text-xs mt-0.5 opacity-70">{ct.desc}</div>
-              </button>
-            ))}
+        {/* ── Coluna esquerda: formulário ── */}
+        <div className="space-y-6">
+
+          {/* Modo: IA ou Manual */}
+          <div className="flex gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
+            <button type="button" onClick={() => switchMode('ai')}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
+                mode === 'ai' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
+              }`}>
+              <Sparkles className="h-4 w-4" /> Gerar com IA
+            </button>
+            <button type="button" onClick={() => switchMode('manual')}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
+                mode === 'manual' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
+              }`}>
+              <PenLine className="h-4 w-4" /> Criar manualmente
+            </button>
           </div>
-        </div>
 
-        {/* Controles modo IA */}
-        {mode === 'ai' && (
-          <>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-                Tema / gancho <span className="normal-case text-zinc-600">(opcional)</span>
-              </label>
-              <input type="text" value={theme} onChange={e => setTheme(e.target.value)}
-                placeholder="Ex: Dia do noivo, barba perfeita, experiência premium..."
-                className={base} />
+          {/* Tipo de conteúdo + controles de geração */}
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Tipo de conteúdo</label>
+              <div className="grid grid-cols-4 gap-2">
+                {contentTypes.map(ct => (
+                  <button key={ct.value} type="button" onClick={() => {
+                    setType(ct.value)
+                    setScenes([])
+                    setCards([])
+                    setCreativeUrl('')
+                    setMediaUrlsText('')
+                  }}
+                    className={`rounded-md border p-3 text-left transition-colors ${
+                      type === ct.value ? 'border-white bg-zinc-700 text-white' : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
+                    }`}>
+                    <div className="text-sm font-medium">{ct.label}</div>
+                    <div className="text-xs mt-0.5 opacity-70">{ct.desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <button onClick={generate} disabled={loading}
-              className="flex items-center gap-2 rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? <><RefreshCw className="h-4 w-4 animate-spin" /> Gerando...</> : <><Sparkles className="h-4 w-4" /> Gerar com IA</>}
-            </button>
-          </>
-        )}
 
-        {/* Controles modo manual */}
-        {mode === 'manual' && (
-          <div className="space-y-2">
-            <p className="text-xs text-zinc-500">Preencha os campos abaixo ou importe um JSON gerado no chat do Claude.</p>
-            <input ref={importRef} type="file" accept=".json" onChange={importFromFile} className="hidden" />
-            <button type="button" onClick={() => importRef.current?.click()}
-              className="flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors">
-              <FileUp className="h-4 w-4" /> Importar conteúdo (.json)
-            </button>
-            {importError && (
-              <div className="flex items-center gap-1.5 text-xs text-red-400">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />{importError}
+            {/* Controles modo IA */}
+            {mode === 'ai' && (
+              <>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                    Tema / gancho <span className="normal-case text-zinc-600">(opcional)</span>
+                  </label>
+                  <input type="text" value={theme} onChange={e => setTheme(e.target.value)}
+                    placeholder="Ex: Dia do noivo, barba perfeita, experiência premium..."
+                    className={base} />
+                </div>
+                <button onClick={generate} disabled={loading}
+                  className="flex items-center gap-2 rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  {loading ? <><RefreshCw className="h-4 w-4 animate-spin" /> Gerando...</> : <><Sparkles className="h-4 w-4" /> Gerar com IA</>}
+                </button>
+              </>
+            )}
+
+            {/* Controles modo manual */}
+            {mode === 'manual' && (
+              <div className="space-y-2">
+                <p className="text-xs text-zinc-500">Preencha os campos abaixo ou importe um JSON gerado no chat do Claude.</p>
+                <input ref={importRef} type="file" accept=".json" onChange={importFromFile} className="hidden" />
+                <button type="button" onClick={() => importRef.current?.click()}
+                  className="flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors">
+                  <FileUp className="h-4 w-4" /> Importar conteúdo (.json)
+                </button>
+                {importError && (
+                  <div className="flex items-center gap-1.5 text-xs text-red-400">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />{importError}
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
-      </div>
-
-      {/* Formulário de edição */}
-      {edited !== null && (
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white">
-              {mode === 'ai' ? 'Conteúdo gerado — edite antes de salvar' : 'Preencha o conteúdo'}
-            </h2>
-            {mode === 'ai' && (
-              <button onClick={generate} disabled={loading}
-                className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
-                <RefreshCw className="h-3.5 w-3.5" /> Regenerar
-              </button>
-            )}
+            {error && <p className="text-sm text-red-400">{error}</p>}
           </div>
 
-          {inputField('Título / Tema *', 'title', 'Ex: Barba do mês — o look mais pedido')}
-          {textareaField('Copy / Legenda', 'caption', 6, 'Legenda completa com emojis e hashtags')}
+          {/* Formulário de edição */}
+          {edited !== null && (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-white">
+                  {mode === 'ai' ? 'Conteúdo gerado — edite antes de salvar' : 'Preencha o conteúdo'}
+                </h2>
+                {mode === 'ai' && (
+                  <button onClick={generate} disabled={loading}
+                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
+                    <RefreshCw className="h-3.5 w-3.5" /> Regenerar
+                  </button>
+                )}
+              </div>
 
-          {(type === 'reel' || type === 'carrossel') && (
-            textareaField(
-              type === 'carrossel' ? 'Estrutura geral dos slides' : 'Roteiro completo',
-              'script', 5,
-              type === 'carrossel' ? 'Descreva a sequência dos slides...' : 'Descreva o roteiro do vídeo...'
-            )
-          )}
+              {inputField('Título / Tema *', 'title', 'Ex: Barba do mês — o look mais pedido')}
+              {textareaField('Copy / Legenda', 'caption', 6, 'Legenda completa com emojis e hashtags')}
 
-          {/* Cenas / Cards */}
-          {type === 'reel' && <ScenesEditor scenes={scenes} setScenes={setScenes} />}
-          {type === 'carrossel' && <CardsEditor cards={cards} setCards={setCards} />}
+              {(type === 'reel' || type === 'carrossel') && (
+                textareaField(
+                  type === 'carrossel' ? 'Estrutura geral dos slides' : 'Roteiro completo',
+                  'script', 5,
+                  type === 'carrossel' ? 'Descreva a sequência dos slides...' : 'Descreva o roteiro do vídeo...'
+                )
+              )}
 
-          {/* URL do criativo */}
-          {type === 'carrossel' ? (
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-                URLs dos slides (uma por linha)
-              </label>
-              <textarea
-                rows={4}
-                value={mediaUrlsText}
-                onChange={e => setMediaUrlsText(e.target.value)}
-                placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
-                className={base + ' resize-none'}
-              />
-              <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha.</p>
+              {type === 'reel' && <ScenesEditor scenes={scenes} setScenes={setScenes} />}
+              {type === 'carrossel' && <CardsEditor cards={cards} setCards={setCards} />}
+
+              {/* URL do criativo */}
+              {type === 'carrossel' ? (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                    URLs dos slides (uma por linha)
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={mediaUrlsText}
+                    onChange={e => setMediaUrlsText(e.target.value)}
+                    placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                    className={base + ' resize-none'}
+                  />
+                  <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha. O preview ao lado atualiza automaticamente.</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                    {type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
+                  </label>
+                  <input
+                    type="url"
+                    value={creativeUrl}
+                    onChange={e => setCreativeUrl(e.target.value)}
+                    placeholder="https://drive.google.com/file/d/.../view"
+                    className={base}
+                  />
+                  <p className="text-xs text-zinc-500">
+                    {type === 'reel'
+                      ? 'Link do vídeo no Google Drive. O preview ao lado mostra o player.'
+                      : 'Link da imagem no Google Drive ou URL pública. O preview ao lado atualiza na hora.'}
+                  </p>
+                </div>
+              )}
+
+              {/* Prompts toggle */}
+              <div>
+                <button type="button" onClick={() => setShowPrompts(v => !v)}
+                  className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                  {showPrompts ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  {showPrompts ? 'Ocultar campos de prompt' : 'Mostrar campos de prompt (IA)'}
+                </button>
+              </div>
+
+              {showPrompts && (
+                <div className="border-t border-zinc-800 pt-4">
+                  {textareaField('Prompt de imagem', 'image_prompt', 3, 'Descreva o visual para Midjourney/DALL-E')}
+                </div>
+              )}
+
+              {inputField('CTA', 'cta', 'Ex: Agende pelo link na bio')}
+              {inputField('Parceiro mencionado', 'partner_mentioned', 'Ex: @parceiro')}
+
+              {/* Data de publicação */}
+              <div className="space-y-1 rounded-md border border-zinc-700 bg-zinc-800/40 p-3">
+                <label className="text-xs font-medium text-zinc-300 uppercase tracking-wide flex items-center gap-1.5">
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Data de publicação
+                  <span className="normal-case font-normal text-zinc-500 ml-1">(deixe em branco para salvar sem data)</span>
+                </label>
+                <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
+                  className="rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+                {!scheduledDate && (
+                  <p className="text-xs text-amber-500/80">⚠ Sem data, o conteúdo aparece em "Rascunhos sem data" no calendário.</p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 pt-1">
+                <button onClick={save} disabled={saving || saved}
+                  className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
+                    saved ? 'bg-green-600 text-white' : 'bg-white text-zinc-900 hover:bg-zinc-100'
+                  }`}>
+                  <Save className="h-4 w-4" />
+                  {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar rascunho'}
+                </button>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-                {type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
-              </label>
-              <input
-                type="url"
-                value={creativeUrl}
-                onChange={e => setCreativeUrl(e.target.value)}
-                placeholder="https://drive.google.com/file/d/.../view"
-                className={base}
-              />
-              <p className="text-xs text-zinc-500">
-                {type === 'reel'
-                  ? 'Link do vídeo no Google Drive. Exibido como player na aprovação.'
-                  : 'Link da imagem no Google Drive ou URL pública.'}
-              </p>
-            </div>
           )}
-
-          {/* Prompts toggle */}
-          <div>
-            <button type="button" onClick={() => setShowPrompts(v => !v)}
-              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-              {showPrompts ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-              {showPrompts ? 'Ocultar campos de prompt' : 'Mostrar campos de prompt (IA)'}
-            </button>
-          </div>
-
-          {showPrompts && (
-            <div className="border-t border-zinc-800 pt-4">
-              {textareaField('Prompt de imagem', 'image_prompt', 3, 'Descreva o visual para Midjourney/DALL-E')}
-            </div>
-          )}
-
-          {inputField('CTA', 'cta', 'Ex: Agende pelo link na bio')}
-          {inputField('Parceiro mencionado', 'partner_mentioned', 'Ex: @parceiro')}
-
-          {/* Data de publicação — destaque */}
-          <div className="space-y-1 rounded-md border border-zinc-700 bg-zinc-800/40 p-3">
-            <label className="text-xs font-medium text-zinc-300 uppercase tracking-wide flex items-center gap-1.5">
-              <CalendarDays className="h-3.5 w-3.5" />
-              Data de publicação
-              <span className="normal-case font-normal text-zinc-500 ml-1">(deixe em branco para salvar sem data)</span>
-            </label>
-            <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
-              className="rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
-            {!scheduledDate && (
-              <p className="text-xs text-amber-500/80">⚠ Sem data, o conteúdo aparece em "Rascunhos sem data" no calendário.</p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3 pt-1">
-            <button onClick={save} disabled={saving || saved}
-              className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
-                saved ? 'bg-green-600 text-white' : 'bg-white text-zinc-900 hover:bg-zinc-100'
-              }`}>
-              <Save className="h-4 w-4" />
-              {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar rascunho'}
-            </button>
-          </div>
         </div>
-      )}
+
+        {/* ── Coluna direita: preview ── */}
+        <PreviewPanel
+          clientName={clientName}
+          type={type}
+          caption={edited?.caption ?? ''}
+          title={edited?.title ?? ''}
+          creativeUrl={creativeUrl}
+          mediaUrlsText={mediaUrlsText}
+        />
+      </div>
     </div>
   )
 }
