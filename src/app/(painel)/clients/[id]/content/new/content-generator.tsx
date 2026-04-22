@@ -483,7 +483,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
       </div>
 
       {/* Layout: form + preview */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[65%_35%] gap-6 items-start">
 
         {/* ── Coluna esquerda: formulário ── */}
         <div className="space-y-6">

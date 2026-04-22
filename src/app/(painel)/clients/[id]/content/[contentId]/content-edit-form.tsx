@@ -305,7 +305,7 @@ export function ContentEditForm({
   const [mediaUrlsText, setMediaUrlsText] = useState((content.media_urls ?? []).join('\n'))
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6 items-start">
+    <div className="grid grid-cols-1 xl:grid-cols-[65%_35%] gap-6 items-start">
 
       {/* ── Formulário ── */}
       <form action={update} className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
