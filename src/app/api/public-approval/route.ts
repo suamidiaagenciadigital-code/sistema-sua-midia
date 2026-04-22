@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   // Verificar que o token pertence ao cliente dono do conteúdo
   const { data: content } = await supabase
     .from('contents')
-    .select('id, client_id, status, caption, generated_image_url, scheduled_date')
+    .select('id, client_id, status, type, caption, generated_image_url, media_urls, scheduled_date')
     .eq('id', contentId)
     .single()
 
@@ -61,8 +61,10 @@ export async function POST(req: NextRequest) {
   if (canSchedule && n8nWebhookUrl) {
     const payload = {
       content_id:     contentId,
+      content_type:   content.type ?? 'imagem',
       caption:        content.caption ?? '',
       image_url:      content.generated_image_url ?? null,
+      media_urls:     content.media_urls ?? [],        // carrossel: array de URLs
       scheduled_date: content.scheduled_date!,
       scheduled_time: '09:00',
       page_id:        client.facebook_page_id!,
