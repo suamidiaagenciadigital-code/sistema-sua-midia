@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { scheduleOnSocialMedia } from '@/lib/facebook'
 
 export async function POST(req: NextRequest) {
   const { contentId, token, status, revisionNotes } = await req.json()
@@ -42,14 +41,16 @@ export async function POST(req: NextRequest) {
 
   await supabase.from('contents').update(update).eq('id', contentId)
 
-  // ── Agendar nas redes sociais quando cliente aprova ────────────────────
-  let socialResult: {
-    facebook: { scheduled: boolean; error?: string }
+  // ── Acionar n8n para publicar no Meta ───────────────────────────────────
+  const socialResult: {
+    facebook:  { scheduled: boolean; error?: string }
     instagram: { scheduled: boolean; error?: string }
   } = {
-    facebook: { scheduled: false },
+    facebook:  { scheduled: false },
     instagram: { scheduled: false },
   }
+
+  const n8nWebhookUrl = process.env.N8N_WEBHOOK_PUBLICAR_META
 
   const canSchedule =
     status === 'approved_by_client' &&
@@ -57,43 +58,48 @@ export async function POST(req: NextRequest) {
     client.facebook_page_token &&
     content.scheduled_date
 
-  if (canSchedule) {
-    const result = await scheduleOnSocialMedia({
-      pageId: client.facebook_page_id!,
-      pageToken: client.facebook_page_token!,
-      instagramAccountId: client.instagram_account_id ?? null,
-      caption: content.caption ?? '',
-      imageUrl: content.generated_image_url ?? null,
-      scheduledDate: content.scheduled_date!,
-    })
-
-    // Montar atualização com IDs dos posts agendados
-    const socialUpdate: Record<string, unknown> = {}
-
-    if (result.facebook.post_id) {
-      socialUpdate.facebook_post_id = result.facebook.post_id
-      socialResult.facebook = { scheduled: true }
-    } else {
-      socialResult.facebook = { scheduled: false, error: result.facebook.error ?? undefined }
-      if (result.facebook.error) console.error('[Facebook]', result.facebook.error)
+  if (canSchedule && n8nWebhookUrl) {
+    const payload = {
+      content_id:     contentId,
+      caption:        content.caption ?? '',
+      image_url:      content.generated_image_url ?? null,
+      scheduled_date: content.scheduled_date!,
+      scheduled_time: '09:00',
+      page_id:        client.facebook_page_id!,
+      page_token:     client.facebook_page_token!,
+      ig_account_id:  client.instagram_account_id ?? null,
     }
 
-    if (result.instagram.post_id) {
-      socialUpdate.instagram_post_id = result.instagram.post_id
-      socialResult.instagram = { scheduled: true }
-    } else if (result.instagram.error) {
-      socialResult.instagram = { scheduled: false, error: result.instagram.error }
-      console.error('[Instagram]', result.instagram.error)
-    }
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 25_000) // 25s timeout
 
-    // Marcar como publicado se pelo menos uma plataforma agendou com sucesso
-    if (result.facebook.post_id || result.instagram.post_id) {
-      socialUpdate.status = 'published'
-    }
+      const n8nResp = await fetch(n8nWebhookUrl, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+        signal:  controller.signal,
+      })
+      clearTimeout(timeout)
 
-    if (Object.keys(socialUpdate).length > 0) {
-      await supabase.from('contents').update(socialUpdate).eq('id', contentId)
+      if (n8nResp.ok) {
+        const data = await n8nResp.json() as {
+          facebook?:  { post_id: string | null; error: string | null }
+          instagram?: { post_id: string | null; error: string | null }
+        }
+        socialResult.facebook  = { scheduled: !!data.facebook?.post_id,  error: data.facebook?.error  ?? undefined }
+        socialResult.instagram = { scheduled: !!data.instagram?.post_id, error: data.instagram?.error ?? undefined }
+      } else {
+        console.error('[n8n] Resposta com erro:', n8nResp.status)
+        socialResult.facebook.error = `n8n retornou status ${n8nResp.status}`
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[n8n] Falha ao chamar webhook:', msg)
+      // Não bloqueia a aprovação — só loga o erro
     }
+  } else if (canSchedule && !n8nWebhookUrl) {
+    console.warn('[n8n] N8N_WEBHOOK_PUBLICAR_META não configurado — publicação no Meta ignorada')
   }
 
   return NextResponse.json({ ok: true, social: socialResult })

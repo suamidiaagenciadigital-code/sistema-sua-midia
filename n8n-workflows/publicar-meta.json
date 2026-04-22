@@ -1,0 +1,123 @@
+{
+  "name": "Sua Mídia — Publicar no Meta",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "publicar-meta",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "aa000001-0000-0000-0000-000000000001",
+      "name": "Receber Aprovação",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolve Google Drive URL para URL pública direta\nfunction resolveUrl(url) {\n  if (!url) return null;\n  const match = url.match(/drive\\.google\\.com\\/(?:file\\/d\\/|open\\?id=)([^/?&]+)/);\n  if (match) return `https://lh3.googleusercontent.com/d/${match[1]}`;\n  return url;\n}\n\n// Converte data/hora de Brasília (UTC-3) para Unix timestamp UTC\nfunction toUtcTimestamp(date, time) {\n  const t = time || '09:00';\n  const [y, m, d] = date.split('-').map(Number);\n  const [h, min] = t.split(':').map(Number);\n  return Math.floor(Date.UTC(y, m - 1, d, h + 3, min, 0) / 1000);\n}\n\nconst body = $input.first().json.body;\n\nif (!body.page_id || !body.page_token) {\n  throw new Error('page_id e page_token são obrigatórios');\n}\n\nreturn [{\n  json: {\n    content_id:   body.content_id,\n    caption:      body.caption || '',\n    image_url:    resolveUrl(body.image_url),\n    scheduled_ts: toUtcTimestamp(body.scheduled_date, body.scheduled_time),\n    page_id:      body.page_id,\n    page_token:   body.page_token,\n    ig_account_id: body.ig_account_id || null,\n  }\n}];"
+      },
+      "id": "aa000001-0000-0000-0000-000000000002",
+      "name": "Preparar Dados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.page_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "fields", "value": "access_token" },
+            { "name": "access_token", "value": "={{ $json.page_token }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aa000001-0000-0000-0000-000000000003",
+      "name": "Buscar Page Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('Preparar Dados').first().json;\nconst tokenResp = $input.first().json;\n\nconst GRAPH = 'https://graph.facebook.com/v21.0';\nconst pageToken = tokenResp.access_token || prep.page_token;\nconst now = Math.floor(Date.now() / 1000);\n\n// Valida se o agendamento é pelo menos 10 minutos no futuro\nif (prep.scheduled_ts < now + 600) {\n  const msg = 'Data de agendamento deve ser pelo menos 10 minutos no futuro';\n  return [{ json: {\n    content_id: prep.content_id,\n    update: {},\n    facebook:  { post_id: null, error: msg },\n    instagram: { post_id: null, error: msg },\n  }}];\n}\n\n// ── Facebook ───────────────────────────────────────────────────────\nlet fbPostId = null;\nlet fbError  = null;\ntry {\n  const fbEndpoint = prep.image_url\n    ? `${GRAPH}/${prep.page_id}/photos`\n    : `${GRAPH}/${prep.page_id}/feed`;\n\n  const fbParams = new URLSearchParams();\n  fbParams.append('published', 'false');\n  fbParams.append('scheduled_publish_time', String(prep.scheduled_ts));\n  fbParams.append('access_token', pageToken);\n\n  if (prep.image_url) {\n    fbParams.append('url', prep.image_url);\n    fbParams.append('caption', prep.caption);\n  } else {\n    fbParams.append('message', prep.caption);\n  }\n\n  const fbResp = await $helpers.httpRequest({\n    method: 'POST',\n    url: fbEndpoint,\n    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n    body: fbParams.toString(),\n    returnFullResponse: true,\n  });\n\n  const fbData = typeof fbResp.body === 'string' ? JSON.parse(fbResp.body) : fbResp.body;\n  fbPostId = fbData.id || null;\n  fbError  = fbData.error?.message || null;\n} catch (e) {\n  fbError = String(e.message);\n}\n\n// ── Instagram ──────────────────────────────────────────────────────\nlet igPostId = null;\nlet igError  = null;\n\nif (prep.ig_account_id && prep.image_url) {\n  try {\n    // Etapa 1: criar container de mídia\n    const containerParams = new URLSearchParams();\n    containerParams.append('image_url', prep.image_url);\n    containerParams.append('caption', prep.caption);\n    containerParams.append('published', 'false');\n    containerParams.append('scheduled_publish_time', String(prep.scheduled_ts));\n    containerParams.append('access_token', pageToken);\n\n    const containerResp = await $helpers.httpRequest({\n      method: 'POST',\n      url: `${GRAPH}/${prep.ig_account_id}/media`,\n      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n      body: containerParams.toString(),\n      returnFullResponse: true,\n    });\n\n    const containerData = typeof containerResp.body === 'string'\n      ? JSON.parse(containerResp.body) : containerResp.body;\n\n    if (containerData.error) {\n      igError = containerData.error.message;\n    } else if (containerData.id) {\n      // Etapa 2: publicar container\n      const publishParams = new URLSearchParams();\n      publishParams.append('creation_id', containerData.id);\n      publishParams.append('access_token', pageToken);\n\n      const publishResp = await $helpers.httpRequest({\n        method: 'POST',\n        url: `${GRAPH}/${prep.ig_account_id}/media_publish`,\n        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n        body: publishParams.toString(),\n        returnFullResponse: true,\n      });\n\n      const publishData = typeof publishResp.body === 'string'\n        ? JSON.parse(publishResp.body) : publishResp.body;\n\n      igPostId = publishData.id || containerData.id;\n      igError  = publishData.error?.message || null;\n    }\n  } catch (e) {\n    igError = String(e.message);\n  }\n}\n\n// ── Montar payload de update no Supabase ──────────────────────────\nconst update = {};\nif (fbPostId) update.facebook_post_id  = fbPostId;\nif (igPostId) update.instagram_post_id = igPostId;\nif (fbPostId || igPostId) update.status = 'published';\n\nreturn [{ json: {\n  content_id: prep.content_id,\n  update,\n  facebook:  { post_id: fbPostId, error: fbError },\n  instagram: { post_id: igPostId, error: igError },\n}}];"
+      },
+      "id": "aa000001-0000-0000-0000-000000000004",
+      "name": "Publicar no Meta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/contents",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "id", "value": "=eq.{{ $json.content_id }}" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey",         "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization",  "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type",   "value": "application/json" },
+            { "name": "Prefer",         "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.update) }}",
+        "options": { "ignoreResponseCode": true }
+      },
+      "id": "aa000001-0000-0000-0000-000000000005",
+      "name": "Atualizar Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  ok: true,\n  facebook:  $('Publicar no Meta').first().json.facebook,\n  instagram: $('Publicar no Meta').first().json.instagram\n}) }}"
+      },
+      "id": "aa000001-0000-0000-0000-000000000006",
+      "name": "Resposta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    }
+  ],
+  "connections": {
+    "Receber Aprovação": {
+      "main": [[{ "node": "Preparar Dados", "type": "main", "index": 0 }]]
+    },
+    "Preparar Dados": {
+      "main": [[{ "node": "Buscar Page Token", "type": "main", "index": 0 }]]
+    },
+    "Buscar Page Token": {
+      "main": [[{ "node": "Publicar no Meta", "type": "main", "index": 0 }]]
+    },
+    "Publicar no Meta": {
+      "main": [[{ "node": "Atualizar Supabase", "type": "main", "index": 0 }]]
+    },
+    "Atualizar Supabase": {
+      "main": [[{ "node": "Resposta", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "sua-midia-publicar-meta-v1",
+  "meta": { "templateCredsSetupCompleted": true },
+  "id": "SuaMidia-PublicarMeta",
+  "tags": []
+}
