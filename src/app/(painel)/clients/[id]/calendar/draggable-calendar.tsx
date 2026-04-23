@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
@@ -28,6 +28,11 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
   const router = useRouter()
   const [items, setItems] = useState<ContentItem[]>(contents)
   const [draggingId, setDraggingId] = useState<string | null>(null)
+
+  // Sincroniza items quando o prop contents muda (navegação entre meses)
+  useEffect(() => {
+    setItems(contents)
+  }, [contents])
   const [dragOverDay, setDragOverDay] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
 
