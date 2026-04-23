@@ -34,12 +34,16 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
   const today = new Date()
 
   // Montar mapa dia → conteúdos
+  // Parseamos YYYY-MM-DD diretamente para evitar problemas de fuso horário
+  // e garantir que só conteúdos do mês/ano correto apareçam nas células
   const byDay: Record<number, ContentItem[]> = {}
   for (const c of items) {
     if (!c.scheduled_date) continue
-    const day = new Date(c.scheduled_date + 'T12:00:00').getDate()
-    if (!byDay[day]) byDay[day] = []
-    byDay[day]!.push(c)
+    const parts = c.scheduled_date.split('-').map(Number)
+    const [cy, cm, cd] = parts as [number, number, number]
+    if (cy !== year || cm !== month) continue   // ignora datas de outros meses
+    if (!byDay[cd]) byDay[cd] = []
+    byDay[cd]!.push(c)
   }
 
   const handleDragStart = useCallback((e: React.DragEvent, id: string) => {

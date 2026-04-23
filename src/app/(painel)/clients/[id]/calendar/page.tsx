@@ -176,7 +176,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
                   <div>
                     <p className="text-sm text-white font-medium">{c.title}</p>
                     <p className="text-xs text-zinc-500 mt-0.5">
-                      {TYPE_LABEL[c.type]} · {new Date(c.scheduled_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      {TYPE_LABEL[c.type]} · {c.scheduled_date?.split('-').reverse().join('/')}
                     </p>
                   </div>
                 </div>
