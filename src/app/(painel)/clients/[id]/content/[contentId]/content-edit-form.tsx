@@ -73,6 +73,7 @@ function PreviewPanel({
   const initials = clientName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   const isReel = type === 'reel'
   const isCarousel = type === 'carrossel'
+  const isStory = type === 'story'
   const mediaUrls = isCarousel
     ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
     : []
@@ -84,7 +85,25 @@ function PreviewPanel({
       <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Preview</p>
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
-        {!hasContent ? (
+        {isStory ? (
+          /* ── Story: 9/16, só imagem ── */
+          imageUrl.trim() ? (
+            <div className="w-full bg-zinc-900" style={{ aspectRatio: '9/16' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolveImageUrl(imageUrl)}
+                alt="Story preview"
+                className="w-full h-full object-cover"
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
+            </div>
+          ) : (
+            <div className="w-full bg-zinc-800 flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '9/16' }}>
+              <span className="text-4xl opacity-20">📲</span>
+              <p className="text-zinc-600 text-xs">1080 × 1920</p>
+            </div>
+          )
+        ) : !hasContent ? (
           <div className="flex flex-col items-center justify-center py-16 px-6 text-center space-y-3">
             <span className="text-3xl opacity-30">{TYPE_EMOJI[type] ?? '📄'}</span>
             <p className="text-zinc-600 text-xs">O preview aparece aqui quando você adicionar uma imagem ou legenda</p>
@@ -349,38 +368,10 @@ export function ContentEditForm({
           />
         </div>
 
-        {(content.type === 'reel' || content.type === 'carrossel') && (
+        {/* Story: só campo de URL */}
+        {content.type === 'story' ? (
           <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-              {content.type === 'carrossel' ? 'Estrutura geral dos slides' : 'Roteiro completo'}
-              <span className="ml-2 normal-case text-zinc-600 font-normal">(texto livre)</span>
-            </label>
-            <textarea name="script" rows={5} defaultValue={content.script ?? ''} className={base} />
-          </div>
-        )}
-
-        {content.type === 'reel' && <ScenesEditor initial={content.reel_scenes} />}
-        {content.type === 'carrossel' && <CardsEditor initial={content.carousel_cards} />}
-
-        {/* URLs de mídia */}
-        {content.type === 'carrossel' ? (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">URLs dos slides (uma por linha)</label>
-            <textarea
-              name="media_urls_text"
-              rows={5}
-              value={mediaUrlsText}
-              onChange={e => setMediaUrlsText(e.target.value)}
-              placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
-              className={base}
-            />
-            <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha. O preview ao lado atualiza na hora.</p>
-          </div>
-        ) : (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-              {content.type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
-            </label>
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Link da imagem (1080×1920)</label>
             <input
               type="url"
               name="generated_image_url"
@@ -389,38 +380,84 @@ export function ContentEditForm({
               placeholder="https://drive.google.com/file/d/.../view"
               className={base}
             />
-            <p className="text-xs text-zinc-500">O preview ao lado atualiza automaticamente ao colar o link.</p>
+            <p className="text-xs text-zinc-500">Cole o link do Google Drive. O preview ao lado mostra em 9:16.</p>
           </div>
-        )}
+        ) : (
+          <>
+            {(content.type === 'reel' || content.type === 'carrossel') && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                  {content.type === 'carrossel' ? 'Estrutura geral dos slides' : 'Roteiro completo'}
+                  <span className="ml-2 normal-case text-zinc-600 font-normal">(texto livre)</span>
+                </label>
+                <textarea name="script" rows={5} defaultValue={content.script ?? ''} className={base} />
+              </div>
+            )}
 
-        {/* Prompts toggle */}
-        <div>
-          <button type="button" onClick={() => setShowPrompts(v => !v)}
-            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-            {showPrompts ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            {showPrompts ? 'Ocultar campos de prompt' : 'Mostrar campos de prompt (IA)'}
-          </button>
-        </div>
+            {content.type === 'reel' && <ScenesEditor initial={content.reel_scenes} />}
+            {content.type === 'carrossel' && <CardsEditor initial={content.carousel_cards} />}
 
-        {showPrompts && (
-          <div className="space-y-4 pt-1 border-t border-zinc-800">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Prompt de imagem</label>
-              <textarea name="image_prompt" rows={3} defaultValue={content.image_prompt ?? ''} className={base} />
+            {/* URLs de mídia */}
+            {content.type === 'carrossel' ? (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">URLs dos slides (uma por linha)</label>
+                <textarea
+                  name="media_urls_text"
+                  rows={5}
+                  value={mediaUrlsText}
+                  onChange={e => setMediaUrlsText(e.target.value)}
+                  placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                  className={base}
+                />
+                <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha. O preview ao lado atualiza na hora.</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                  {content.type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
+                </label>
+                <input
+                  type="url"
+                  name="generated_image_url"
+                  value={imageUrl}
+                  onChange={e => setImageUrl(e.target.value)}
+                  placeholder="https://drive.google.com/file/d/.../view"
+                  className={base}
+                />
+                <p className="text-xs text-zinc-500">O preview ao lado atualiza automaticamente ao colar o link.</p>
+              </div>
+            )}
+
+            {/* Prompts toggle */}
+            <div>
+              <button type="button" onClick={() => setShowPrompts(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                {showPrompts ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                {showPrompts ? 'Ocultar campos de prompt' : 'Mostrar campos de prompt (IA)'}
+              </button>
             </div>
-          </div>
-        )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">CTA</label>
-            <input type="text" name="cta" defaultValue={content.cta ?? ''} className={base} />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Parceiro mencionado</label>
-            <input type="text" name="partner_mentioned" defaultValue={content.partner_mentioned ?? ''} className={base} />
-          </div>
-        </div>
+            {showPrompts && (
+              <div className="space-y-4 pt-1 border-t border-zinc-800">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Prompt de imagem</label>
+                  <textarea name="image_prompt" rows={3} defaultValue={content.image_prompt ?? ''} className={base} />
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">CTA</label>
+                <input type="text" name="cta" defaultValue={content.cta ?? ''} className={base} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Parceiro mencionado</label>
+                <input type="text" name="partner_mentioned" defaultValue={content.partner_mentioned ?? ''} className={base} />
+              </div>
+            </div>
+          </>
+        )}
 
         {/* Data + Hora de publicação */}
         <div className="rounded-md border border-zinc-700 bg-zinc-800/40 p-3 space-y-2">

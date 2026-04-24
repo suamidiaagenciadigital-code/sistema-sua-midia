@@ -81,6 +81,7 @@ function PreviewPanel({
 
   const isReel = type === 'reel'
   const isCarousel = type === 'carrossel'
+  const isStory = type === 'story'
   const mediaUrls = isCarousel
     ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
     : []
@@ -93,10 +94,28 @@ function PreviewPanel({
 
       <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
         {!hasContent ? (
-          <div className="flex flex-col items-center justify-center py-16 px-6 text-center space-y-3">
+          <div className="flex flex-col items-center justify-center gap-2" style={{ aspectRatio: isStory ? '9/16' : undefined, minHeight: isStory ? undefined : '160px', padding: '40px 24px' }}>
             <span className="text-3xl opacity-30">{TYPE_EMOJI[type] ?? '📄'}</span>
-            <p className="text-zinc-600 text-xs">Preencha os campos ao lado para ver o preview</p>
+            <p className="text-zinc-600 text-xs text-center">Preencha os campos ao lado para ver o preview</p>
           </div>
+        ) : isStory ? (
+          /* ── Story: 9/16, só imagem, sem header/caption ── */
+          creativeUrl.trim() ? (
+            <div className="w-full bg-zinc-900" style={{ aspectRatio: '9/16' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={resolveImageUrl(creativeUrl)}
+                alt="Story preview"
+                className="w-full h-full object-cover"
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
+            </div>
+          ) : (
+            <div className="w-full bg-zinc-800 flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '9/16' }}>
+              <span className="text-4xl opacity-20">📲</span>
+              <p className="text-zinc-600 text-xs">1080 × 1920</p>
+            </div>
+          )
         ) : (
           <>
             {/* Post header */}
@@ -149,9 +168,7 @@ function PreviewPanel({
                   src={resolveImageUrl(creativeUrl)}
                   alt={title || 'Preview'}
                   className="w-full h-full object-cover"
-                  onError={e => {
-                    (e.target as HTMLImageElement).style.display = 'none'
-                  }}
+                  onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                 />
               </div>
             ) : (
@@ -582,40 +599,14 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                 )}
               </div>
 
-              {inputField('Título / Tema *', 'title', 'Ex: Barba do mês — o look mais pedido')}
-              {textareaField('Copy / Legenda', 'caption', 6, 'Legenda completa com emojis e hashtags')}
-
-              {(type === 'reel' || type === 'carrossel') && (
-                textareaField(
-                  type === 'carrossel' ? 'Estrutura geral dos slides' : 'Roteiro completo',
-                  'script', 5,
-                  type === 'carrossel' ? 'Descreva a sequência dos slides...' : 'Descreva o roteiro do vídeo...'
-                )
+              {inputField('Título / Tema *', 'title',
+                type === 'story' ? 'Ex: Story — promoção de quinta' : 'Ex: Barba do mês — o look mais pedido'
               )}
 
-              {type === 'reel' && <ScenesEditor scenes={scenes} setScenes={setScenes} />}
-              {type === 'carrossel' && <CardsEditor cards={cards} setCards={setCards} />}
-
-              {/* URL do criativo */}
-              {type === 'carrossel' ? (
+              {/* Story: só campo de link da imagem */}
+              {type === 'story' ? (
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-                    URLs dos slides (uma por linha)
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={mediaUrlsText}
-                    onChange={e => setMediaUrlsText(e.target.value)}
-                    placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
-                    className={base + ' resize-none'}
-                  />
-                  <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha. O preview ao lado atualiza automaticamente.</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-                    {type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
-                  </label>
+                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Link da imagem (1080×1920)</label>
                   <input
                     type="url"
                     value={creativeUrl}
@@ -623,31 +614,77 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                     placeholder="https://drive.google.com/file/d/.../view"
                     className={base}
                   />
-                  <p className="text-xs text-zinc-500">
-                    {type === 'reel'
-                      ? 'Link do vídeo no Google Drive. O preview ao lado mostra o player.'
-                      : 'Link da imagem no Google Drive ou URL pública. O preview ao lado atualiza na hora.'}
-                  </p>
+                  <p className="text-xs text-zinc-500">Cole o link do Google Drive. O preview ao lado mostra em 9:16.</p>
                 </div>
+              ) : (
+                <>
+                  {textareaField('Copy / Legenda', 'caption', 6, 'Legenda completa com emojis e hashtags')}
+
+                  {(type === 'reel' || type === 'carrossel') && (
+                    textareaField(
+                      type === 'carrossel' ? 'Estrutura geral dos slides' : 'Roteiro completo',
+                      'script', 5,
+                      type === 'carrossel' ? 'Descreva a sequência dos slides...' : 'Descreva o roteiro do vídeo...'
+                    )
+                  )}
+
+                  {type === 'reel' && <ScenesEditor scenes={scenes} setScenes={setScenes} />}
+                  {type === 'carrossel' && <CardsEditor cards={cards} setCards={setCards} />}
+
+                  {/* URL do criativo */}
+                  {type === 'carrossel' ? (
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                        URLs dos slides (uma por linha)
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={mediaUrlsText}
+                        onChange={e => setMediaUrlsText(e.target.value)}
+                        placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                        className={base + ' resize-none'}
+                      />
+                      <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha. O preview ao lado atualiza automaticamente.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                        {type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
+                      </label>
+                      <input
+                        type="url"
+                        value={creativeUrl}
+                        onChange={e => setCreativeUrl(e.target.value)}
+                        placeholder="https://drive.google.com/file/d/.../view"
+                        className={base}
+                      />
+                      <p className="text-xs text-zinc-500">
+                        {type === 'reel'
+                          ? 'Link do vídeo no Google Drive. O preview ao lado mostra o player.'
+                          : 'Link da imagem no Google Drive ou URL pública. O preview ao lado atualiza na hora.'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Prompts toggle */}
+                  <div>
+                    <button type="button" onClick={() => setShowPrompts(v => !v)}
+                      className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                      {showPrompts ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      {showPrompts ? 'Ocultar campos de prompt' : 'Mostrar campos de prompt (IA)'}
+                    </button>
+                  </div>
+
+                  {showPrompts && (
+                    <div className="border-t border-zinc-800 pt-4">
+                      {textareaField('Prompt de imagem', 'image_prompt', 3, 'Descreva o visual para Midjourney/DALL-E')}
+                    </div>
+                  )}
+
+                  {inputField('CTA', 'cta', 'Ex: Agende pelo link na bio')}
+                  {inputField('Parceiro mencionado', 'partner_mentioned', 'Ex: @parceiro')}
+                </>
               )}
-
-              {/* Prompts toggle */}
-              <div>
-                <button type="button" onClick={() => setShowPrompts(v => !v)}
-                  className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
-                  {showPrompts ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  {showPrompts ? 'Ocultar campos de prompt' : 'Mostrar campos de prompt (IA)'}
-                </button>
-              </div>
-
-              {showPrompts && (
-                <div className="border-t border-zinc-800 pt-4">
-                  {textareaField('Prompt de imagem', 'image_prompt', 3, 'Descreva o visual para Midjourney/DALL-E')}
-                </div>
-              )}
-
-              {inputField('CTA', 'cta', 'Ex: Agende pelo link na bio')}
-              {inputField('Parceiro mencionado', 'partner_mentioned', 'Ex: @parceiro')}
 
               {/* Data + Hora de publicação */}
               <div className="rounded-md border border-zinc-700 bg-zinc-800/40 p-3 space-y-2">

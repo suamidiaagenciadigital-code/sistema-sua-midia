@@ -113,8 +113,9 @@ export default async function PublicApprovalPage({ params }: Props) {
     .in('status', ['sent_to_client', 'approved_by_client', 'published'])
     .order('scheduled_date', { ascending: true })
 
-  const pending  = (contents ?? []).filter(c => c.status === 'sent_to_client')
-  const approved = (contents ?? []).filter(c => c.status === 'approved_by_client' || c.status === 'published')
+  // Stories não aparecem na página de aprovação (gerenciados internamente)
+  const pending  = (contents ?? []).filter(c => c.status === 'sent_to_client' && c.type !== 'story')
+  const approved = (contents ?? []).filter(c => (c.status === 'approved_by_client' || c.status === 'published') && c.type !== 'story')
 
   const initials = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
