@@ -51,33 +51,15 @@ export async function POST(
     ig_account_id:     client.instagram_account_id ?? null,
   }
 
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 30_000)
+  // Atualizar status imediatamente (o n8n atualiza novamente ao final com post_ids)
+  await supabase.from('contents').update({ status: 'published' }).eq('id', contentId)
 
-    const n8nResp = await fetch(n8nWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    })
-    clearTimeout(timeout)
+  // Disparar n8n em background (fire-and-forget) — carrosseis podem demorar 60s+
+  fetch(n8nWebhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).catch((e) => console.error('[publish-now] n8n erro background:', e))
 
-    if (!n8nResp.ok) {
-      const body = await n8nResp.text()
-      console.error('[publish-now] n8n erro:', n8nResp.status, body)
-      return NextResponse.json({ error: `n8n retornou status ${n8nResp.status}` }, { status: 500 })
-    }
-
-    const data = await n8nResp.json()
-
-    // Atualizar status para publicado
-    await supabase.from('contents').update({ status: 'published' }).eq('id', contentId)
-
-    return NextResponse.json({ ok: true, social: data })
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    console.error('[publish-now] Falha:', msg)
-    return NextResponse.json({ error: msg }, { status: 500 })
-  }
+  return NextResponse.json({ ok: true, social: { queued: true } })
 }
