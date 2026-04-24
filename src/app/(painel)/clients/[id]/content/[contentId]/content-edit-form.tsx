@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, ChevronUp, Send, Loader2 } from 'lucide-react'
 import { updateContentAction } from './actions'
 
 interface ReelScene {
@@ -29,6 +29,7 @@ interface ContentData {
   cta: string | null
   partner_mentioned: string | null
   scheduled_date: string | null
+  scheduled_time: string | null
   revision_notes: string | null
   reel_scenes: ReelScene[] | null
   carousel_cards: CarouselCard[] | null
@@ -303,6 +304,27 @@ export function ContentEditForm({
   const [caption, setCaption] = useState(content.caption ?? '')
   const [imageUrl, setImageUrl] = useState(content.generated_image_url ?? '')
   const [mediaUrlsText, setMediaUrlsText] = useState((content.media_urls ?? []).join('\n'))
+  const [scheduledTime, setScheduledTime] = useState(content.scheduled_time ?? '09:00')
+
+  // Estado do botão Publicar agora
+  const [publishing, setPublishing] = useState(false)
+  const [publishResult, setPublishResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  const publishNow = async () => {
+    if (!confirm('Publicar este conteúdo agora no Facebook e Instagram? Esta ação não pode ser desfeita.')) return
+    setPublishing(true)
+    setPublishResult(null)
+    try {
+      const res = await fetch(`/api/contents/${contentId}/publish-now`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao publicar')
+      setPublishResult({ ok: true, msg: 'Publicado com sucesso!' })
+    } catch (e) {
+      setPublishResult({ ok: false, msg: e instanceof Error ? e.message : 'Erro ao publicar' })
+    } finally {
+      setPublishing(false)
+    }
+  }
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[65%_35%] gap-6 items-start">
@@ -400,10 +422,24 @@ export function ContentEditForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Data de publicação</label>
-            <input type="date" name="scheduled_date" defaultValue={content.scheduled_date ?? ''} className={base} />
+        {/* Data + Hora de publicação */}
+        <div className="rounded-md border border-zinc-700 bg-zinc-800/40 p-3 space-y-2">
+          <label className="text-xs font-medium text-zinc-300 uppercase tracking-wide">Agendamento</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500">Data</label>
+              <input type="date" name="scheduled_date" defaultValue={content.scheduled_date ?? ''} className={base} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-zinc-500">Hora</label>
+              <input
+                type="time"
+                name="scheduled_time"
+                value={scheduledTime}
+                onChange={e => setScheduledTime(e.target.value)}
+                className={base}
+              />
+            </div>
           </div>
         </div>
 
@@ -412,10 +448,34 @@ export function ContentEditForm({
           <textarea name="revision_notes" rows={2} defaultValue={content.revision_notes ?? ''} className={base} />
         </div>
 
-        <button type="submit"
-          className="rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors">
-          Salvar alterações
-        </button>
+        <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-zinc-800">
+          <button type="submit"
+            className="rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors">
+            Salvar alterações
+          </button>
+
+          <button
+            type="button"
+            onClick={publishNow}
+            disabled={publishing}
+            className="flex items-center gap-2 rounded-md bg-green-700 hover:bg-green-600 disabled:opacity-50 px-5 py-2 text-sm font-semibold text-white transition-colors"
+          >
+            {publishing
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> Publicando...</>
+              : <><Send className="h-4 w-4" /> Publicar agora</>
+            }
+          </button>
+        </div>
+
+        {publishResult && (
+          <div className={`rounded-md px-3 py-2 text-xs font-medium ${
+            publishResult.ok
+              ? 'bg-green-900/30 text-green-300 border border-green-800'
+              : 'bg-red-900/30 text-red-300 border border-red-800'
+          }`}>
+            {publishResult.ok ? '✓ ' : '✗ '}{publishResult.msg}
+          </div>
+        )}
       </form>
 
       {/* ── Preview ── */}

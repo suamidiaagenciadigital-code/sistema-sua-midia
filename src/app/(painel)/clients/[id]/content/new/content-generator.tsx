@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2,
-  PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays,
+  PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays, Send, Loader2,
 } from 'lucide-react'
 
 interface Generated {
@@ -310,6 +310,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
 
   const [edited, setEdited] = useState<Generated | null>(null)
   const [scheduledDate, setScheduledDate] = useState('')
+  const [scheduledTime, setScheduledTime] = useState('09:00')
   const [creativeUrl, setCreativeUrl] = useState('')
   const [mediaUrlsText, setMediaUrlsText] = useState('')
   const [scenes, setScenes] = useState<ReelScene[]>([])
@@ -414,6 +415,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         client_id: clientId,
         type,
         scheduled_date: scheduledDate || null,
+        scheduled_time: scheduledDate ? scheduledTime : null,
         status: 'pending_my_approval',
         ...edited,
         generated_image_url: type !== 'carrossel' && creativeUrl.trim() ? creativeUrl.trim() : null,
@@ -647,28 +649,39 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
               {inputField('CTA', 'cta', 'Ex: Agende pelo link na bio')}
               {inputField('Parceiro mencionado', 'partner_mentioned', 'Ex: @parceiro')}
 
-              {/* Data de publicação */}
-              <div className="space-y-1 rounded-md border border-zinc-700 bg-zinc-800/40 p-3">
+              {/* Data + Hora de publicação */}
+              <div className="rounded-md border border-zinc-700 bg-zinc-800/40 p-3 space-y-2">
                 <label className="text-xs font-medium text-zinc-300 uppercase tracking-wide flex items-center gap-1.5">
                   <CalendarDays className="h-3.5 w-3.5" />
-                  Data de publicação
+                  Agendamento
                   <span className="normal-case font-normal text-zinc-500 ml-1">(deixe em branco para salvar sem data)</span>
                 </label>
-                <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
-                  className="rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-zinc-500">Data</label>
+                    <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
+                      className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-zinc-500">Hora</label>
+                    <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
+                      className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+                  </div>
+                </div>
                 {!scheduledDate && (
                   <p className="text-xs text-amber-500/80">⚠ Sem data, o conteúdo aparece em "Rascunhos sem data" no calendário.</p>
                 )}
               </div>
 
-              <div className="flex items-center gap-3 pt-1">
+              <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-zinc-800">
                 <button onClick={save} disabled={saving || saved}
                   className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
                     saved ? 'bg-green-600 text-white' : 'bg-white text-zinc-900 hover:bg-zinc-100'
                   }`}>
-                  <Save className="h-4 w-4" />
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar rascunho'}
                 </button>
+                <p className="text-xs text-zinc-600">Para publicar agora, salve primeiro e use o botão na página do conteúdo.</p>
               </div>
             </div>
           )}

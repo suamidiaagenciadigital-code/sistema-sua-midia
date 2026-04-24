@@ -45,6 +45,7 @@ export async function updateContentAction(clientId: string, contentId: string, f
     cta: formData.get('cta') as string || null,
     partner_mentioned: formData.get('partner_mentioned') as string || null,
     scheduled_date: formData.get('scheduled_date') as string || null,
+    scheduled_time: formData.get('scheduled_time') as string || null,
     revision_notes: formData.get('revision_notes') as string || null,
   }).eq('id', contentId)
 

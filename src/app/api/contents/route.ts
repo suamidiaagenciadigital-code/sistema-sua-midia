@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       cta: body.cta || null,
       partner_mentioned: body.partner_mentioned || null,
       scheduled_date: body.scheduled_date || null,
+      scheduled_time: body.scheduled_time || null,
       status: body.status || 'pending_my_approval',
       generated_image_url: body.generated_image_url || null,
       media_urls: body.media_urls ?? null,

@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { updateClientAction } from './actions'
 import { DeleteClientButton } from './delete-button'
 import { DispatchApprovalButton } from './dispatch-approval-button'
-import { ChevronLeft, Sparkles, Plug, ImagePlay } from 'lucide-react'
+import { ChevronLeft, Sparkles, Plug } from 'lucide-react'
 import { Client } from '@/lib/types'
 import { ImportClientProfileButton } from '../import-profile-button'
 
@@ -72,13 +72,6 @@ export default async function ClientPage({ params }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href={`/clients/${id}/stories/new`}
-            className="flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 transition-colors"
-          >
-            <ImagePlay className="h-4 w-4" />
-            Story
-          </Link>
           <Link
             href={`/clients/${id}/content/new`}
             className="flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors"

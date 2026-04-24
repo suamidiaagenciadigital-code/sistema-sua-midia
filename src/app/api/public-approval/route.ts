@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   // Verificar que o token pertence ao cliente dono do conteúdo
   const { data: content } = await supabase
     .from('contents')
-    .select('id, client_id, status, type, caption, generated_image_url, media_urls, scheduled_date')
+    .select('id, client_id, status, type, caption, generated_image_url, media_urls, scheduled_date, scheduled_time')
     .eq('id', contentId)
     .single()
 
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       image_url:      content.generated_image_url ?? null,
       media_urls:     content.media_urls ?? [],        // carrossel: array de URLs
       scheduled_date: content.scheduled_date!,
-      scheduled_time: '09:00',
+      scheduled_time: (content as Record<string, unknown>).scheduled_time as string ?? '09:00',
       page_id:        client.facebook_page_id!,
       page_token:     client.facebook_page_token!,
       ig_account_id:  client.instagram_account_id ?? null,
