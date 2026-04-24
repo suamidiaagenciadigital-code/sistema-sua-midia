@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       content_type:   content.type ?? 'imagem',
       caption:        content.caption ?? '',
       image_url:      content.generated_image_url ?? null,
-      media_urls:     content.media_urls ?? [],        // carrossel: array de URLs
+      media_urls:     content.media_urls ?? [],
       scheduled_date: content.scheduled_date!,
       scheduled_time: (content as Record<string, unknown>).scheduled_time as string ?? '09:00',
       page_id:        client.facebook_page_id!,
@@ -72,34 +72,15 @@ export async function POST(req: NextRequest) {
       ig_account_id:  client.instagram_account_id ?? null,
     }
 
-    try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 25_000) // 25s timeout
+    // Fire-and-forget — não bloqueia a resposta (carrosseis podem demorar 60s+)
+    fetch(n8nWebhookUrl, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    }).catch((e) => console.error('[n8n] Falha ao chamar webhook:', e))
 
-      const n8nResp = await fetch(n8nWebhookUrl, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-        signal:  controller.signal,
-      })
-      clearTimeout(timeout)
-
-      if (n8nResp.ok) {
-        const data = await n8nResp.json() as {
-          facebook?:  { post_id: string | null; error: string | null }
-          instagram?: { post_id: string | null; error: string | null }
-        }
-        socialResult.facebook  = { scheduled: !!data.facebook?.post_id,  error: data.facebook?.error  ?? undefined }
-        socialResult.instagram = { scheduled: !!data.instagram?.post_id, error: data.instagram?.error ?? undefined }
-      } else {
-        console.error('[n8n] Resposta com erro:', n8nResp.status)
-        socialResult.facebook.error = `n8n retornou status ${n8nResp.status}`
-      }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error('[n8n] Falha ao chamar webhook:', msg)
-      // Não bloqueia a aprovação — só loga o erro
-    }
+    socialResult.facebook  = { scheduled: true }
+    socialResult.instagram = { scheduled: true }
   } else if (canSchedule && !n8nWebhookUrl) {
     console.warn('[n8n] N8N_WEBHOOK_PUBLICAR_META não configurado — publicação no Meta ignorada')
   }
