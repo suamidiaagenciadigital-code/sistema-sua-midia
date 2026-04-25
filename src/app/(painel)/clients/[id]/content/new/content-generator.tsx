@@ -424,7 +424,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     setSaving(true)
     setError('')
     try {
-      const mediaUrls = type === 'carrossel'
+      const mediaUrls = (type === 'carrossel' || type === 'story')
         ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
         : null
 
@@ -603,18 +603,18 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                 type === 'story' ? 'Ex: Story — promoção de quinta' : 'Ex: Barba do mês — o look mais pedido'
               )}
 
-              {/* Story: só campo de link da imagem */}
+              {/* Story: múltiplas mídias (uma por linha) */}
               {type === 'story' ? (
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Link da imagem (1080×1920)</label>
-                  <input
-                    type="url"
-                    value={creativeUrl}
-                    onChange={e => setCreativeUrl(e.target.value)}
-                    placeholder="https://drive.google.com/file/d/.../view"
-                    className={base}
+                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Links das mídias (1080×1920) — uma por linha</label>
+                  <textarea
+                    rows={3}
+                    value={mediaUrlsText}
+                    onChange={e => { setMediaUrlsText(e.target.value); setCreativeUrl(e.target.value.split('\n')[0]?.trim() ?? '') }}
+                    placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                    className={base + ' resize-none'}
                   />
-                  <p className="text-xs text-zinc-500">Cole o link do Google Drive. O preview ao lado mostra em 9:16.</p>
+                  <p className="text-xs text-zinc-500">Cole um link por linha. Cada linha vira um frame do story. O preview mostra o primeiro.</p>
                 </div>
               ) : (
                 <>

@@ -368,19 +368,20 @@ export function ContentEditForm({
           />
         </div>
 
-        {/* Story: só campo de URL */}
+        {/* Story: múltiplas mídias (uma por linha) */}
         {content.type === 'story' ? (
           <div className="space-y-1">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Link da imagem (1080×1920)</label>
-            <input
-              type="url"
-              name="generated_image_url"
-              value={imageUrl}
-              onChange={e => setImageUrl(e.target.value)}
-              placeholder="https://drive.google.com/file/d/.../view"
-              className={base}
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Links das mídias (1080×1920) — uma por linha</label>
+            <textarea
+              name="media_urls_text"
+              rows={3}
+              value={mediaUrlsText}
+              onChange={e => { setMediaUrlsText(e.target.value); setImageUrl(e.target.value.split('\n')[0]?.trim() ?? '') }}
+              placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+              className={base + ' resize-none'}
             />
-            <p className="text-xs text-zinc-500">Cole o link do Google Drive. O preview ao lado mostra em 9:16.</p>
+            <input type="hidden" name="generated_image_url" value={imageUrl} />
+            <p className="text-xs text-zinc-500">Cole um link por linha. Cada linha vira um frame do story. O preview mostra o primeiro.</p>
           </div>
         ) : (
           <>
