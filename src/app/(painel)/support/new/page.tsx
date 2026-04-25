@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft } from 'lucide-react'
 import { createTicketAction } from './actions'
+import { SubmitButton } from '../../_components/submit-button'
 
 export default async function NewTicketPage() {
   const supabase = await createClient()
@@ -39,10 +40,13 @@ export default async function NewTicketPage() {
           />
         </div>
 
-        <button type="submit"
-          className="w-full rounded-md bg-white py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors">
+        <SubmitButton
+          className="w-full rounded-md bg-white py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 justify-center"
+          loadingText="Classificando com IA..."
+          savedText="Ticket criado!"
+        >
           Classificar com IA e criar ticket
-        </button>
+        </SubmitButton>
       </form>
     </div>
   )

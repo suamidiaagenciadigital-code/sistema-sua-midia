@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, ChevronDown, ChevronUp, Send, Loader2 } from 'lucide-react'
 import { updateContentAction } from './actions'
+import { SubmitButton } from '../../../../_components/submit-button'
 
 interface ReelScene {
   scene: number
@@ -487,10 +488,9 @@ export function ContentEditForm({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-zinc-800">
-          <button type="submit"
-            className="rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors">
+          <SubmitButton className="rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100">
             Salvar alterações
-          </button>
+          </SubmitButton>
 
           <button
             type="button"

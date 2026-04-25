@@ -6,6 +6,7 @@ import { DeleteClientButton } from './delete-button'
 import { DispatchApprovalButton } from './dispatch-approval-button'
 import { ChevronLeft, Sparkles, Plug } from 'lucide-react'
 import { Client } from '@/lib/types'
+import { SubmitButton } from '../../_components/submit-button'
 import { ImportClientProfileButton } from '../import-profile-button'
 
 interface Props {
@@ -153,10 +154,9 @@ export default async function ClientPage({ params }: Props) {
         </Section>
 
         <div className="flex gap-3 pt-2">
-          <button type="submit"
-            className="rounded-md bg-white px-6 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors">
+          <SubmitButton className="rounded-md bg-white px-6 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100">
             Salvar alterações
-          </button>
+          </SubmitButton>
           <Link href="/clients"
             className="rounded-md border border-zinc-700 px-6 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors">
             Cancelar

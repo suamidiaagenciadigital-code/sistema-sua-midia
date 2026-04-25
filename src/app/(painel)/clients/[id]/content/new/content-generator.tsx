@@ -433,7 +433,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         type,
         scheduled_date: scheduledDate || null,
         scheduled_time: scheduledDate ? scheduledTime : null,
-        status: 'pending_my_approval',
+        status: 'sent_to_client',
         ...edited,
         generated_image_url: type !== 'carrossel' && creativeUrl.trim() ? creativeUrl.trim() : null,
         media_urls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : null,

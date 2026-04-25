@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft } from 'lucide-react'
 import { updateCampaignStatusAction, deleteCampaignAction } from './actions'
+import { SubmitButton } from '../../_components/submit-button'
 
 const statusLabel: Record<string, string> = {
   draft: 'Rascunho',
@@ -106,23 +107,23 @@ export default async function CampaignDetailPage({ params }: Props) {
         <div className="flex flex-wrap gap-2">
           {campaign.status !== 'active' && (
             <form action={activate}>
-              <button type="submit" className="rounded-md bg-green-900/40 border border-green-800 px-4 py-1.5 text-xs font-medium text-green-300 hover:bg-green-900/60 transition-colors">
+              <SubmitButton className="rounded-md bg-green-900/40 border border-green-800 px-4 py-1.5 text-xs font-medium text-green-300 hover:bg-green-900/60" loadingText="Ativando..." savedText="Ativa!">
                 Marcar como ativa
-              </button>
+              </SubmitButton>
             </form>
           )}
           {campaign.status === 'active' && (
             <form action={pause}>
-              <button type="submit" className="rounded-md bg-yellow-900/40 border border-yellow-800 px-4 py-1.5 text-xs font-medium text-yellow-300 hover:bg-yellow-900/60 transition-colors">
+              <SubmitButton className="rounded-md bg-yellow-900/40 border border-yellow-800 px-4 py-1.5 text-xs font-medium text-yellow-300 hover:bg-yellow-900/60" loadingText="Pausando..." savedText="Pausada!">
                 Pausar campanha
-              </button>
+              </SubmitButton>
             </form>
           )}
           {campaign.status !== 'completed' && (
             <form action={complete}>
-              <button type="submit" className="rounded-md border border-zinc-700 px-4 py-1.5 text-xs font-medium text-zinc-400 hover:text-white hover:border-zinc-500 transition-colors">
+              <SubmitButton className="rounded-md border border-zinc-700 px-4 py-1.5 text-xs font-medium text-zinc-400 hover:text-white hover:border-zinc-500" loadingText="Encerrando..." savedText="Encerrada!">
                 Encerrar campanha
-              </button>
+              </SubmitButton>
             </form>
           )}
         </div>

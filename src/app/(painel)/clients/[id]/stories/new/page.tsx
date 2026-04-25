@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft } from 'lucide-react'
 import { createStoryAction } from './actions'
+import { SubmitButton } from '../../../../_components/submit-button'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -141,12 +142,13 @@ export default async function NewStoryPage({ params }: Props) {
 
         {/* Botões */}
         <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            className="rounded-md bg-white px-6 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors"
+          <SubmitButton
+            className="rounded-md bg-white px-6 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100"
+            loadingText="Agendando..."
+            savedText="Story agendado!"
           >
             Publicar / Agendar story
-          </button>
+          </SubmitButton>
           <Link
             href={`/clients/${id}`}
             className="rounded-md border border-zinc-700 px-6 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"

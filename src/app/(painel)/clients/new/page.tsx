@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClientAction } from './actions'
 import { ChevronLeft } from 'lucide-react'
 import { ImportClientProfileButton } from '../import-profile-button'
+import { SubmitButton } from '../../_components/submit-button'
 
 interface FieldProps {
   label: string
@@ -150,12 +151,12 @@ export default function NewClientPage() {
         </Section>
 
         <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            className="rounded-md bg-white px-6 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors"
+          <SubmitButton
+            className="rounded-md bg-white px-6 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100"
+            savedText="Cliente salvo!"
           >
             Salvar cliente
-          </button>
+          </SubmitButton>
           <Link
             href="/clients"
             className="rounded-md border border-zinc-700 px-6 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors"
