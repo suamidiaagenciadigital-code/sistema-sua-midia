@@ -10,7 +10,7 @@ export default async function ApprovalsPage() {
     .from('contents')
     .select('id, title, type, status, scheduled_date, caption, revision_notes, revision_count, client_id, clients(name)')
     .in('status', ['pending_my_approval', 'revision', 'sent_to_client'])
-    .order('scheduled_date', { ascending: true })
+    .order('created_at', { ascending: false })
 
   const pending = contents?.filter(c => c.status === 'pending_my_approval') ?? []
   const revision = contents?.filter(c => c.status === 'revision') ?? []
