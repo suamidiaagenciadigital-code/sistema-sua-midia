@@ -3,12 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { CheckSquare, Clock } from 'lucide-react'
 import { STATUS_COLOR, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ApprovalsPage() {
   const supabase = await createClient()
 
   const { data: contents } = await supabase
     .from('contents')
-    .select('id, title, type, status, scheduled_date, caption, revision_notes, revision_count, client_id, clients(name)')
+    .select('id, title, type, status, scheduled_date, created_at, caption, revision_notes, revision_count, client_id, clients(name)')
     .in('status', ['pending_my_approval', 'revision', 'sent_to_client'])
     .order('created_at', { ascending: false })
 
