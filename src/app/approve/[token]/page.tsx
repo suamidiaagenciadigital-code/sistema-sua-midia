@@ -122,7 +122,7 @@ export default async function PublicApprovalPage({ params }: Props) {
     .sort((a, b) => {
       const da = a.scheduled_date ?? ''
       const db = b.scheduled_date ?? ''
-      return da.localeCompare(db)
+      return db.localeCompare(da)
     })
 
   const initials = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
