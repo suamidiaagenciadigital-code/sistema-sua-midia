@@ -12,17 +12,23 @@
       "name": "Receber Aprovação",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Resolve Google Drive URL para URL pública direta\nfunction resolveUrl(url) {\n  if (!url) return null;\n  const match = url.match(/drive\\.google\\.com\\/(?:file\\/d\\/|open\\?id=)([^/?&]+)/);\n  if (match) return `https://lh3.googleusercontent.com/d/${match[1]}`;\n  return url;\n}\n\n// Converte data/hora de Brasília (UTC-3) para Unix timestamp UTC\nfunction toUtcTimestamp(date, time) {\n  const t = time || '09:00';\n  const [y, m, d] = date.split('-').map(Number);\n  const [h, min] = t.split(':').map(Number);\n  return Math.floor(Date.UTC(y, m - 1, d, h + 3, min, 0) / 1000);\n}\n\nconst body = $input.first().json.body;\n\nif (!body.page_id || !body.page_token) {\n  throw new Error('page_id e page_token são obrigatórios');\n}\n\n// Resolve URLs do carrossel\nconst mediaUrls = Array.isArray(body.media_urls)\n  ? body.media_urls.map(u => resolveUrl(u)).filter(Boolean)\n  : [];\n\nconst publishImmediately = !!body.publish_immediately;\n\nreturn [{\n  json: {\n    content_id:          body.content_id,\n    content_type:        body.content_type || 'imagem',\n    caption:             body.caption || '',\n    image_url:           resolveUrl(body.image_url),\n    media_urls:          mediaUrls,\n    scheduled_ts:        publishImmediately ? null : toUtcTimestamp(body.scheduled_date, body.scheduled_time),\n    publish_immediately: publishImmediately,\n    page_id:             body.page_id,\n    page_token:          body.page_token,\n    ig_account_id:       body.ig_account_id || null,\n  }\n}];"
+        "jsCode": "// Resolve Google Drive URL para imagem\nfunction resolveUrl(url) {\n  if (!url) return null;\n  const match = url.match(/drive\\.google\\.com\\/(?:file\\/d\\/|open\\?id=)([^/?&]+)/);\n  if (match) return `https://lh3.googleusercontent.com/d/${match[1]}`;\n  return url;\n}\n\n// Resolve Google Drive URL para download direto (vídeo)\nfunction resolveVideoUrl(url) {\n  if (!url) return null;\n  const match = url.match(/drive\\.google\\.com\\/(?:file\\/d\\/|open\\?id=)([^/?&]+)/);\n  if (match) return `https://drive.google.com/uc?export=download&id=${match[1]}`;\n  return url;\n}\n\n// Converte data/hora de Brasília (UTC-3) para Unix timestamp UTC\nfunction toUtcTimestamp(date, time) {\n  const t = time || '09:00';\n  const [y, m, d] = date.split('-').map(Number);\n  const [h, min] = t.split(':').map(Number);\n  return Math.floor(Date.UTC(y, m - 1, d, h + 3, min, 0) / 1000);\n}\n\nconst body = $input.first().json.body;\n\nif (!body.page_id || !body.page_token) {\n  throw new Error('page_id e page_token são obrigatórios');\n}\n\nconst contentType = body.content_type || 'imagem';\nconst isReel      = contentType === 'reel';\n\n// media_urls: passa URLs brutas (sem resolver) para o nó publicar tratar por tipo\nconst mediaUrls = Array.isArray(body.media_urls)\n  ? body.media_urls.filter(Boolean)\n  : [];\n\nconst publishImmediately = !!body.publish_immediately;\n\nreturn [{\n  json: {\n    content_id:          body.content_id,\n    content_type:        contentType,\n    caption:             body.caption || '',\n    image_url:           isReel ? resolveVideoUrl(body.image_url) : resolveUrl(body.image_url),\n    media_urls:          mediaUrls,\n    scheduled_ts:        publishImmediately ? null : toUtcTimestamp(body.scheduled_date, body.scheduled_time),\n    publish_immediately: publishImmediately,\n    page_id:             body.page_id,\n    page_token:          body.page_token,\n    ig_account_id:       body.ig_account_id || null,\n  }\n}];"
       },
       "id": "aa000001-0000-0000-0000-000000000002",
       "name": "Preparar Dados",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -31,8 +37,14 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "fields",       "value": "access_token" },
-            { "name": "access_token", "value": "={{ $json.page_token }}" }
+            {
+              "name": "fields",
+              "value": "access_token"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.page_token }}"
+            }
           ]
         },
         "options": {}
@@ -41,17 +53,23 @@
       "name": "Buscar Page Token",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// ── Helpers ───────────────────────────────────────────────────────────────\nfunction parseJson(data) {\n  if (typeof data === 'string') { try { return JSON.parse(data); } catch(e) { return {}; } }\n  return data || {};\n}\n\n// Substitui URLSearchParams (não disponível no sandbox do n8n)\nfunction toFormBody(obj) {\n  return Object.entries(obj)\n    .filter(([, v]) => v !== undefined && v !== null)\n    .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(String(v)))\n    .join('&');\n}\n\nasync function postForm(url, params) {\n  const resp = await $helpers.httpRequest({\n    method: 'POST',\n    url,\n    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n    body: toFormBody(params),\n    returnFullResponse: true,\n  });\n  return parseJson(resp.body);\n}\n\n// Cria container de mídia no Instagram e publica\nasync function igCreateAndPublish(igId, containerParams, publishToken, GRAPH) {\n  const containerResp = await postForm(`${GRAPH}/${igId}/media`, containerParams);\n  if (containerResp.error) return { post_id: null, error: containerResp.error.message };\n  if (!containerResp.id)   return { post_id: null, error: 'Instagram não retornou creation_id' };\n\n  const publishResp = await postForm(`${GRAPH}/${igId}/media_publish`, {\n    creation_id:  containerResp.id,\n    access_token: publishToken,\n  });\n  return {\n    post_id: publishResp.id || containerResp.id,\n    error:   publishResp.error?.message || null,\n  };\n}\n\n// ── Contexto ───────────────────────────────────────────────────────────────\nconst prep        = $('Preparar Dados').first().json;\nconst tokenResp   = $input.first().json;\nconst GRAPH       = 'https://graph.facebook.com/v21.0';\nconst pageToken   = tokenResp.access_token || prep.page_token;\nconst now         = Math.floor(Date.now() / 1000);\nconst type        = prep.content_type;\nconst isStory     = type === 'story';\nconst immediately = !!prep.publish_immediately;\n\n// Validação de tempo (apenas para agendamentos futuros, não imediatos)\nif (!immediately && !isStory && prep.scheduled_ts < now + 600) {\n  const msg = 'Data de agendamento deve ser pelo menos 10 minutos no futuro';\n  return [{ json: { content_id: prep.content_id, update: {},\n    facebook: { post_id: null, error: msg }, instagram: { post_id: null, error: msg } }}];\n}\n\n// ── FACEBOOK ───────────────────────────────────────────────────────────────\nlet fbPostId = null, fbError = null;\ntry {\n  if (isStory) {\n    // Story Facebook: publica cada frame separadamente (imagem ou vídeo)\n    const storyUrls = (prep.media_urls && prep.media_urls.length > 0)\n      ? prep.media_urls\n      : (prep.image_url ? [prep.image_url] : []);\n    for (const frameUrl of storyUrls) {\n      const isVid = /\\.(mp4|mov|avi|webm|m4v)/i.test(frameUrl);\n      const endpoint = `${GRAPH}/${prep.page_id}/${isVid ? 'video_stories' : 'photo_stories'}`;\n      const storyParams = isVid\n        ? { file_url: frameUrl, access_token: pageToken }\n        : { url: frameUrl, access_token: pageToken };\n      const r = await postForm(endpoint, storyParams);\n      if (r.post_id || r.id) fbPostId = r.post_id || r.id;\n      if (r.error && !fbPostId) fbError = r.error.message || null;\n    }\n\n  } else if (type === 'reel' && prep.image_url) {\n    // Reel Facebook\n    const p = {\n      file_url:     prep.image_url,\n      published:    immediately ? 'true' : 'false',\n      access_token: pageToken,\n      ...(prep.caption ? { description: prep.caption } : {}),\n      ...(!immediately ? { scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n    };\n    const r = await postForm(`${GRAPH}/${prep.page_id}/videos`, p);\n    fbPostId = r.id || null;\n    fbError  = r.error?.message || null;\n\n  } else {\n    // Imagem ou Carrossel → post de foto\n    const imgUrl = (type === 'carrossel' && prep.media_urls?.length)\n      ? prep.media_urls[0]\n      : prep.image_url;\n\n    const endpoint = imgUrl\n      ? `${GRAPH}/${prep.page_id}/photos`\n      : `${GRAPH}/${prep.page_id}/feed`;\n\n    const p = {\n      published:    immediately ? 'true' : 'false',\n      access_token: pageToken,\n      ...(!immediately ? { scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n      ...(imgUrl ? { url: imgUrl, caption: prep.caption } : { message: prep.caption }),\n    };\n    const r = await postForm(endpoint, p);\n    fbPostId = r.id || null;\n    fbError  = r.error?.message || null;\n  }\n} catch(e) {\n  fbError = String(e.message);\n}\n\n// ── INSTAGRAM ──────────────────────────────────────────────────────────────\nlet igPostId = null, igError = null;\n\nif (prep.ig_account_id) {\n  try {\n    if (type === 'carrossel' && prep.media_urls?.length >= 2) {\n      // Carrossel Instagram\n      const itemIds = [];\n      for (const imgUrl of prep.media_urls) {\n        const r = await postForm(`${GRAPH}/${prep.ig_account_id}/media`, {\n          image_url:        imgUrl,\n          is_carousel_item: 'true',\n          access_token:     pageToken,\n        });\n        if (r.error) { igError = r.error.message; break; }\n        if (r.id)    itemIds.push(r.id);\n      }\n\n      if (!igError && itemIds.length >= 2) {\n        const carouselParams = {\n          media_type:   'CAROUSEL',\n          children:     itemIds.join(','),\n          caption:      prep.caption,\n          access_token: pageToken,\n          ...(!immediately ? { published: 'false', scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n        };\n        const result = await igCreateAndPublish(prep.ig_account_id, carouselParams, pageToken, GRAPH);\n        igPostId = result.post_id;\n        igError  = result.error;\n      }\n\n    } else if (type === 'reel' && prep.image_url) {\n      // Reel Instagram\n      const p = {\n        media_type:   'REELS',\n        video_url:    prep.image_url,\n        caption:      prep.caption,\n        access_token: pageToken,\n        ...(!immediately ? { published: 'false', scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n      };\n      const result = await igCreateAndPublish(prep.ig_account_id, p, pageToken, GRAPH);\n      igPostId = result.post_id;\n      igError  = result.error;\n\n    } else if (isStory) {\n      // Story Instagram: publica cada frame separadamente (imagem ou vídeo)\n      const storyUrls = (prep.media_urls && prep.media_urls.length > 0)\n        ? prep.media_urls\n        : (prep.image_url ? [prep.image_url] : []);\n      for (const frameUrl of storyUrls) {\n        const isVid = /\\.(mp4|mov|avi|webm|m4v)/i.test(frameUrl);\n        const igStoryParams = { media_type: 'STORIES', access_token: pageToken };\n        if (isVid) { igStoryParams.video_url = frameUrl; } else { igStoryParams.image_url = frameUrl; }\n        const result = await igCreateAndPublish(prep.ig_account_id, igStoryParams, pageToken, GRAPH);\n        if (result.post_id) igPostId = result.post_id;\n        if (result.error && !igPostId) igError = result.error;\n      }\n\n    } else if (prep.image_url) {\n      // Imagem única\n      const p = {\n        image_url:    prep.image_url,\n        caption:      prep.caption,\n        access_token: pageToken,\n        ...(!immediately ? { published: 'false', scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n      };\n      const result = await igCreateAndPublish(prep.ig_account_id, p, pageToken, GRAPH);\n      igPostId = result.post_id;\n      igError  = result.error;\n    }\n  } catch(e) {\n    igError = String(e.message);\n  }\n}\n\n// ── Payload para Supabase ──────────────────────────────────────────────────\nconst update = {};\nif (fbPostId) update.facebook_post_id  = fbPostId;\nif (igPostId) update.instagram_post_id = igPostId;\nif (fbPostId || igPostId) update.status = 'published';\n\nreturn [{ json: {\n  content_id: prep.content_id,\n  update,\n  facebook:  { post_id: fbPostId, error: fbError },\n  instagram: { post_id: igPostId, error: igError },\n}}];"
+        "jsCode": "// ── Helpers ───────────────────────────────────────────────────────────────\nfunction parseJson(data) {\n  if (typeof data === 'string') { try { return JSON.parse(data); } catch(e) { return {}; } }\n  return data || {};\n}\n\nfunction toFormBody(obj) {\n  return Object.entries(obj)\n    .filter(([, v]) => v !== undefined && v !== null)\n    .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(String(v)))\n    .join('&');\n}\n\nasync function postForm(url, params) {\n  const resp = await $helpers.httpRequest({\n    method: 'POST',\n    url,\n    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\n    body: toFormBody(params),\n    returnFullResponse: true,\n  });\n  return parseJson(resp.body);\n}\n\n// Resolve Drive URL para imagem\nfunction resolveUrl(url) {\n  if (!url) return null;\n  const match = url.match(/drive\\.google\\.com\\/(?:file\\/d\\/|open\\?id=)([^/?&]+)/);\n  if (match) return `https://lh3.googleusercontent.com/d/${match[1]}`;\n  return url;\n}\n\n// Resolve Drive URL para download direto (vídeo)\nfunction resolveVideoUrl(url) {\n  if (!url) return null;\n  const match = url.match(/drive\\.google\\.com\\/(?:file\\/d\\/|open\\?id=)([^/?&]+)/);\n  if (match) return `https://drive.google.com/uc?export=download&id=${match[1]}`;\n  return url;\n}\n\n// Detecta se URL é de vídeo (pela extensão)\nfunction isVideoUrl(url) {\n  if (!url) return false;\n  return /\\.(mp4|mov|avi|webm|m4v)/i.test(url);\n}\n\n// Cria container de mídia no Instagram e publica\nasync function igCreateAndPublish(igId, containerParams, publishToken, GRAPH) {\n  const containerResp = await postForm(`${GRAPH}/${igId}/media`, containerParams);\n  if (containerResp.error) return { post_id: null, error: containerResp.error.message };\n  if (!containerResp.id)   return { post_id: null, error: 'Instagram não retornou creation_id' };\n\n  const publishResp = await postForm(`${GRAPH}/${igId}/media_publish`, {\n    creation_id:  containerResp.id,\n    access_token: publishToken,\n  });\n  return {\n    post_id: publishResp.id || containerResp.id,\n    error:   publishResp.error?.message || null,\n  };\n}\n\n// ── Contexto ───────────────────────────────────────────────────────────────\nconst prep        = $('Preparar Dados').first().json;\nconst tokenResp   = $input.first().json;\nconst GRAPH       = 'https://graph.facebook.com/v21.0';\nconst pageToken   = tokenResp.access_token || prep.page_token;\nconst now         = Math.floor(Date.now() / 1000);\nconst type        = prep.content_type;\nconst isStory     = type === 'story';\nconst immediately = !!prep.publish_immediately;\n\n// Validação de tempo (apenas para agendamentos futuros, exceto story)\nif (!immediately && !isStory && prep.scheduled_ts < now + 600) {\n  const msg = 'Data de agendamento deve ser pelo menos 10 minutos no futuro';\n  return [{ json: { content_id: prep.content_id, update: {},\n    facebook: { post_id: null, error: msg }, instagram: { post_id: null, error: msg } }}];\n}\n\n// ── FACEBOOK ───────────────────────────────────────────────────────────────\nlet fbPostId = null, fbError = null;\ntry {\n  if (isStory) {\n    // Story: publica cada frame como story separado (imagem ou vídeo)\n    const storyUrls = (prep.media_urls && prep.media_urls.length > 0)\n      ? prep.media_urls\n      : (prep.image_url ? [prep.image_url] : []);\n    for (const rawUrl of storyUrls) {\n      const isVid    = isVideoUrl(rawUrl);\n      const frameUrl = isVid ? resolveVideoUrl(rawUrl) : resolveUrl(rawUrl);\n      const endpoint = `${GRAPH}/${prep.page_id}/${isVid ? 'video_stories' : 'photo_stories'}`;\n      const storyParams = isVid\n        ? { file_url: frameUrl, access_token: pageToken }\n        : { url: frameUrl, access_token: pageToken };\n      const r = await postForm(endpoint, storyParams);\n      if (r.post_id || r.id) fbPostId = r.post_id || r.id;\n      if (r.error && !fbPostId) fbError = r.error.message || null;\n    }\n\n  } else if (type === 'reel' && prep.image_url) {\n    // Reel Facebook: URL de download do Drive (já resolvida em Preparar Dados)\n    const p = {\n      file_url:     prep.image_url,\n      published:    immediately ? 'true' : 'false',\n      access_token: pageToken,\n      ...(prep.caption ? { description: prep.caption } : {}),\n      ...(!immediately ? { scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n    };\n    const r = await postForm(`${GRAPH}/${prep.page_id}/videos`, p);\n    fbPostId = r.id || null;\n    fbError  = r.error?.message || null;\n\n  } else if (type === 'carrossel' && prep.media_urls?.length >= 2) {\n    // Carrossel Facebook: multi-photo post com attached_media\n    const photoIds = [];\n    for (const rawUrl of prep.media_urls) {\n      const r = await postForm(`${GRAPH}/${prep.page_id}/photos`, {\n        url:          resolveUrl(rawUrl),\n        published:    'false',\n        access_token: pageToken,\n      });\n      if (r.id) photoIds.push({ media_fbid: r.id });\n    }\n    if (photoIds.length >= 1) {\n      const r = await postForm(`${GRAPH}/${prep.page_id}/feed`, {\n        message:        prep.caption || '',\n        attached_media: JSON.stringify(photoIds),\n        published:      immediately ? 'true' : 'false',\n        access_token:   pageToken,\n        ...(!immediately ? { scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n      });\n      fbPostId = r.id || null;\n      fbError  = r.error?.message || null;\n    }\n\n  } else {\n    // Imagem simples\n    const imgUrl   = prep.image_url;\n    const endpoint = imgUrl\n      ? `${GRAPH}/${prep.page_id}/photos`\n      : `${GRAPH}/${prep.page_id}/feed`;\n    const p = {\n      published:    immediately ? 'true' : 'false',\n      access_token: pageToken,\n      ...(!immediately ? { scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n      ...(imgUrl ? { url: imgUrl, caption: prep.caption } : { message: prep.caption }),\n    };\n    const r = await postForm(endpoint, p);\n    fbPostId = r.id || null;\n    fbError  = r.error?.message || null;\n  }\n} catch(e) {\n  fbError = String(e.message);\n}\n\n// ── INSTAGRAM ──────────────────────────────────────────────────────────────\nlet igPostId = null, igError = null;\n\nif (prep.ig_account_id) {\n  try {\n    if (type === 'carrossel' && prep.media_urls?.length >= 2) {\n      // Carrossel Instagram\n      const itemIds = [];\n      for (const rawUrl of prep.media_urls) {\n        const r = await postForm(`${GRAPH}/${prep.ig_account_id}/media`, {\n          image_url:        resolveUrl(rawUrl),\n          is_carousel_item: 'true',\n          access_token:     pageToken,\n        });\n        if (r.error) { igError = r.error.message; break; }\n        if (r.id)    itemIds.push(r.id);\n      }\n      if (!igError && itemIds.length >= 2) {\n        const carouselParams = {\n          media_type:   'CAROUSEL',\n          children:     itemIds.join(','),\n          caption:      prep.caption,\n          access_token: pageToken,\n          ...(!immediately ? { published: 'false', scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n        };\n        const result = await igCreateAndPublish(prep.ig_account_id, carouselParams, pageToken, GRAPH);\n        igPostId = result.post_id;\n        igError  = result.error;\n      }\n\n    } else if (type === 'reel' && prep.image_url) {\n      // Reel Instagram: URL de download do Drive (já resolvida em Preparar Dados)\n      const p = {\n        media_type:   'REELS',\n        video_url:    prep.image_url,\n        caption:      prep.caption,\n        access_token: pageToken,\n        ...(!immediately ? { published: 'false', scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n      };\n      const result = await igCreateAndPublish(prep.ig_account_id, p, pageToken, GRAPH);\n      igPostId = result.post_id;\n      igError  = result.error;\n\n    } else if (isStory) {\n      // Story Instagram: publica cada frame como story separado (imagem ou vídeo)\n      const storyUrls = (prep.media_urls && prep.media_urls.length > 0)\n        ? prep.media_urls\n        : (prep.image_url ? [prep.image_url] : []);\n      for (const rawUrl of storyUrls) {\n        const isVid    = isVideoUrl(rawUrl);\n        const frameUrl = isVid ? resolveVideoUrl(rawUrl) : resolveUrl(rawUrl);\n        const igStoryParams = { media_type: 'STORIES', access_token: pageToken };\n        if (isVid) { igStoryParams.video_url = frameUrl; } else { igStoryParams.image_url = frameUrl; }\n        const result = await igCreateAndPublish(prep.ig_account_id, igStoryParams, pageToken, GRAPH);\n        if (result.post_id) igPostId = result.post_id;\n        if (result.error && !igPostId) igError = result.error;\n      }\n\n    } else if (prep.image_url) {\n      // Imagem simples Instagram\n      const p = {\n        image_url:    prep.image_url,\n        caption:      prep.caption,\n        access_token: pageToken,\n        ...(!immediately ? { published: 'false', scheduled_publish_time: String(prep.scheduled_ts) } : {}),\n      };\n      const result = await igCreateAndPublish(prep.ig_account_id, p, pageToken, GRAPH);\n      igPostId = result.post_id;\n      igError  = result.error;\n    }\n  } catch(e) {\n    igError = String(e.message);\n  }\n}\n\n// ── Payload para Supabase ──────────────────────────────────────────────────\nconst update = {};\nif (fbPostId) update.facebook_post_id  = fbPostId;\nif (igPostId) update.instagram_post_id = igPostId;\nif (fbPostId || igPostId) update.status = 'published';\n\nreturn [{ json: {\n  content_id: prep.content_id,\n  update,\n  facebook:  { post_id: fbPostId, error: fbError },\n  instagram: { post_id: igPostId, error: igError },\n}}];"
       },
       "id": "aa000001-0000-0000-0000-000000000004",
       "name": "Publicar no Meta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -60,28 +78,48 @@
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
-            { "name": "id", "value": "=eq.{{ $json.content_id }}" }
+            {
+              "name": "id",
+              "value": "=eq.{{ $json.content_id }}"
+            }
           ]
         },
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "apikey",        "value": "={{ $vars.SUPABASE_SERVICE_KEY }}" },
-            { "name": "Authorization", "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}" },
-            { "name": "Content-Type",  "value": "application/json" },
-            { "name": "Prefer",        "value": "return=minimal" }
+            {
+              "name": "apikey",
+              "value": "={{ $vars.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $vars.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.update) }}",
-        "options": { "ignoreResponseCode": true }
+        "options": {
+          "ignoreResponseCode": true
+        }
       },
       "id": "aa000001-0000-0000-0000-000000000005",
       "name": "Atualizar Supabase",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
@@ -92,30 +130,77 @@
       "name": "Resposta",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     }
   ],
   "connections": {
     "Receber Aprovação": {
-      "main": [[{ "node": "Preparar Dados",   "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Preparar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Preparar Dados": {
-      "main": [[{ "node": "Buscar Page Token", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Buscar Page Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Buscar Page Token": {
-      "main": [[{ "node": "Publicar no Meta",  "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Publicar no Meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Publicar no Meta": {
-      "main": [[{ "node": "Atualizar Supabase","type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Atualizar Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Atualizar Supabase": {
-      "main": [[{ "node": "Resposta",          "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
-  "versionId": "sua-midia-publicar-meta-v3",
-  "meta": { "templateCredsSetupCompleted": true },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "sua-midia-publicar-meta-v4",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
   "id": "SuaMidia-PublicarMeta",
   "tags": []
 }
