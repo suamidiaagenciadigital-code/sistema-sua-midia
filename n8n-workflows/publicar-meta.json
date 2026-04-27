@@ -5,7 +5,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "publicar-meta",
-        "responseMode": "lastNode",
+        "responseMode": "responseNode",
         "options": {}
       },
       "id": "aa000001-0000-0000-0000-000000000001",
