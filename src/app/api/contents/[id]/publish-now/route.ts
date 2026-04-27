@@ -15,7 +15,7 @@ function resolveUrl(url: string | null | undefined): string | null {
 function resolveVideoUrl(url: string | null | undefined): string | null {
   if (!url) return null
   const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([^/?&]+)/)
-  if (match) return `https://drive.google.com/uc?export=download&id=${match[1]}`
+  if (match) return `https://drive.usercontent.google.com/download?id=${match[1]}&export=download&confirm=t`
   return url
 }
 
