@@ -164,12 +164,22 @@ export async function POST(
       const container = await postForm(`${GRAPH}/${igId}/media`, containerParams)
       if (container.error) return { post_id: null as string | null, error: container.error.message as string }
       if (!container.id) return { post_id: null, error: 'Instagram não retornou creation_id' }
+
+      // Aguardar container ficar FINISHED (Instagram precisa processar a mídia)
+      for (let t = 0; t < 20; t++) {
+        const st = await fetch(`${GRAPH}/${container.id}?fields=status_code&access_token=${pageToken}`)
+          .then((r) => r.json()).catch(() => ({}))
+        if (st.status_code === 'FINISHED') break
+        if (st.status_code === 'ERROR') return { post_id: null, error: 'IG media error: ' + JSON.stringify(st) }
+        await new Promise((r) => setTimeout(r, 2000))
+      }
+
       const publish = await postForm(`${GRAPH}/${igId}/media_publish`, {
         creation_id: container.id,
         access_token: pageToken,
       })
       return {
-        post_id: (publish.id || container.id) as string,
+        post_id: (publish.id ?? null) as string | null,
         error: (publish.error?.message ?? null) as string | null,
       }
     }
