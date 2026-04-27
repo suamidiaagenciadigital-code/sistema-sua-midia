@@ -114,9 +114,15 @@ export default async function PublicApprovalPage({ params }: Props) {
     .order('created_at', { ascending: false })
 
   // Stories não aparecem na página de aprovação (gerenciados internamente)
-  // Pendentes: mais recente primeiro (created_at DESC já vem da query)
-  const pending  = (contents ?? []).filter(c => c.status === 'sent_to_client' && c.type !== 'story')
-  // Aprovados: ordem cronológica por data agendada (mais antigo primeiro)
+  // Pendentes: ordem crescente por data agendada (mais antigo primeiro)
+  const pending = (contents ?? [])
+    .filter(c => c.status === 'sent_to_client' && c.type !== 'story')
+    .sort((a, b) => {
+      const da = a.scheduled_date ?? ''
+      const db = b.scheduled_date ?? ''
+      return da.localeCompare(db)
+    })
+  // Aprovados: ordem decrescente por data agendada (mais recente primeiro)
   const approved = (contents ?? [])
     .filter(c => (c.status === 'approved_by_client' || c.status === 'published') && c.type !== 'story')
     .sort((a, b) => {
