@@ -75,13 +75,8 @@ export async function POST(
     )
   }
 
-  // Buscar page token atualizado
-  const tokenResp = await fetch(
-    `${GRAPH}/${client.facebook_page_id}?fields=access_token&access_token=${client.facebook_page_token}`,
-  )
-    .then((r) => r.json())
-    .catch(() => ({}))
-  const pageToken: string = tokenResp.access_token || client.facebook_page_token
+  // System User Token — não expira, não precisa de aprovação do app Meta
+  const pageToken: string = 'EAAU7TJPfNhABRWZBZBoG8ZBcvD0Mh46CeyOjfSEXk9vMxqSZANTZB78FtzxbDgT6QjjjFFRnJFsrsKBE9oQwl53emkTELkbclUrFgKKYT8ZANEDluKhCc83Wk68QUrpYJi12jUqtZBp8DhfIsUbKY7X2n0SQJ3BLoZAojN4oP3KLy5owgRBuwMBUkcxrTzqclAZDZD'
 
   const type = (content.type as string) || 'imagem'
   const isStory = type === 'story'
