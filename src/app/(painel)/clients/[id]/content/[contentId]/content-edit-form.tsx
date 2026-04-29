@@ -4,8 +4,9 @@ import { useState, useRef } from 'react'
 import { Plus, Trash2, ChevronDown, ChevronUp, Send, Loader2, Upload } from 'lucide-react'
 import { updateContentAction } from './actions'
 import { SubmitButton } from '../../../../_components/submit-button'
+import { createClient } from '@/lib/supabase/client'
 
-// ── Upload direto de vídeo para Supabase ──────────────────────────────────
+// ── Upload direto do browser para Supabase (sem passar pelo Vercel) ───────
 function VideoUploadField({
   clientId,
   value,
@@ -18,6 +19,7 @@ function VideoUploadField({
   base: string
 }) {
   const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -25,21 +27,42 @@ function VideoUploadField({
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
+    setProgress(0)
     setUploadError(null)
     try {
-      const fd = new FormData()
-      fd.append('file', file)
-      fd.append('clientId', clientId)
-      fd.append('tags', JSON.stringify(['reel']))
-      const resp = await fetch('/api/media/upload', { method: 'POST', body: fd })
-      const result = await resp.json()
-      if (!resp.ok) throw new Error(result.error ?? 'Upload falhou')
-      if (result.file_url) onChange(result.file_url)
-      else throw new Error('URL não retornada pelo servidor')
+      // Upload direto para Supabase Storage — sem passar pelo Vercel
+      const supabase = createClient()
+      const ext = file.name.split('.').pop() ?? 'mp4'
+      const path = `${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(path, file, { contentType: file.type, upsert: false })
+
+      if (uploadError) throw new Error(uploadError.message)
+
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
+
+      // Salvar metadados no banco via API (só metadados, sem o arquivo)
+      await fetch('/api/media/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          file_url: publicUrl,
+          file_type: 'video',
+          original_name: file.name,
+          size_bytes: file.size,
+          tags: ['reel'],
+        }),
+      })
+
+      onChange(publicUrl)
     } catch (err: any) {
       setUploadError(err.message ?? 'Erro no upload')
     } finally {
       setUploading(false)
+      setProgress(0)
       if (fileRef.current) fileRef.current.value = ''
     }
   }
