@@ -14,6 +14,13 @@ export async function POST(req: NextRequest) {
   const ext = fileName.split('.').pop() ?? 'mp4'
   const path = `${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
+  // Criar bucket se não existir
+  const { data: buckets } = await supabase.storage.listBuckets()
+  const bucketExists = buckets?.some(b => b.name === 'media')
+  if (!bucketExists) {
+    await supabase.storage.createBucket('media', { public: true, allowedMimeTypes: ['image/*', 'video/*', 'application/pdf'] })
+  }
+
   const { data, error } = await supabase.storage
     .from('media')
     .createSignedUploadUrl(path)
