@@ -351,6 +351,8 @@ export function ContentEditForm({
 
       {/* ── Formulário ── */}
       <form action={update} className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+        {/* Campo hidden para o servidor saber o tipo ao re-hospedar vídeos */}
+        <input type="hidden" name="type" value={content.type} />
         <h2 className="text-sm font-semibold text-white">Conteúdo</h2>
 
         <div className="space-y-1">

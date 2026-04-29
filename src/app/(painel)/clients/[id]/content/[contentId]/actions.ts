@@ -3,15 +3,28 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { rehostIfDriveVideo, rehostMediaUrls } from '@/lib/rehost-video'
 
 export async function updateContentAction(clientId: string, contentId: string, formData: FormData) {
   const supabase = await createClient()
 
-  // Carousel: parse textarea de URLs (uma por linha)
+  const type = formData.get('type') as string | null
+
+  // Carousel/Story: parse textarea de URLs (uma por linha)
   const mediaUrlsText = formData.get('media_urls_text') as string | null
-  const mediaUrls = mediaUrlsText
+  const rawMediaUrls = mediaUrlsText
     ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
     : null
+
+  // Re-hospedar vídeos do Drive no Supabase Storage
+  const rawGeneratedImageUrl = formData.get('generated_image_url') as string | null
+  const generatedImageUrl = type === 'reel'
+    ? await rehostIfDriveVideo(rawGeneratedImageUrl, clientId)
+    : rawGeneratedImageUrl || null
+
+  const mediaUrls = (type === 'story' || type === 'carrossel')
+    ? await rehostMediaUrls(rawMediaUrls, clientId)
+    : rawMediaUrls
 
   // Cenas do Reel (JSON)
   const reelScenesRaw = formData.get('reel_scenes_json') as string | null
@@ -38,7 +51,7 @@ export async function updateContentAction(clientId: string, contentId: string, f
     caption: formData.get('caption') as string,
     script: formData.get('script') as string || null,
     image_prompt: formData.get('image_prompt') as string || null,
-    generated_image_url: formData.get('generated_image_url') as string || null,
+    generated_image_url: generatedImageUrl,
     media_urls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : null,
     reel_scenes: reelScenes,
     carousel_cards: carouselCards,
