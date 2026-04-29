@@ -4,9 +4,7 @@ import { useState, useRef } from 'react'
 import { Plus, Trash2, ChevronDown, ChevronUp, Send, Loader2, Upload } from 'lucide-react'
 import { updateContentAction } from './actions'
 import { SubmitButton } from '../../../../_components/submit-button'
-import { createClient } from '@/lib/supabase/client'
-
-// ── Upload direto do browser para Supabase (sem passar pelo Vercel) ───────
+// ── Upload direto do browser para Supabase via URL assinada ──────────────
 function VideoUploadField({
   clientId,
   value,
@@ -19,7 +17,6 @@ function VideoUploadField({
   base: string
 }) {
   const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -27,23 +24,29 @@ function VideoUploadField({
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
-    setProgress(0)
     setUploadError(null)
     try {
-      // Upload direto para Supabase Storage — sem passar pelo Vercel
-      const supabase = createClient()
-      const ext = file.name.split('.').pop() ?? 'mp4'
-      const path = `${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      // 1. Pedir URL assinada ao servidor (usa service key, bypass RLS)
+      const presignResp = await fetch('/api/media/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, fileName: file.name, contentType: file.type }),
+      })
+      if (!presignResp.ok) {
+        const err = await presignResp.json()
+        throw new Error(err.error ?? 'Erro ao gerar URL de upload')
+      }
+      const { signedUrl, publicUrl } = await presignResp.json()
 
-      const { error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(path, file, { contentType: file.type, upsert: false })
+      // 2. Upload direto para o Supabase usando a URL assinada (sem passar pelo Vercel)
+      const uploadResp = await fetch(signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!uploadResp.ok) throw new Error('Falha no upload para o storage')
 
-      if (uploadError) throw new Error(uploadError.message)
-
-      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(path)
-
-      // Salvar metadados no banco via API (só metadados, sem o arquivo)
+      // 3. Registrar metadados no banco
       await fetch('/api/media/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,7 +65,6 @@ function VideoUploadField({
       setUploadError(err.message ?? 'Erro no upload')
     } finally {
       setUploading(false)
-      setProgress(0)
       if (fileRef.current) fileRef.current.value = ''
     }
   }
