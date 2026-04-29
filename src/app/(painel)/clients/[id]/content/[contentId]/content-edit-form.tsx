@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { Plus, Trash2, ChevronDown, ChevronUp, Send, Loader2, Upload } from 'lucide-react'
 import { updateContentAction } from './actions'
 import { SubmitButton } from '../../../../_components/submit-button'
+import { createClient } from '@/lib/supabase/client'
 // ── Upload direto do browser para Supabase via URL assinada ──────────────
 function VideoUploadField({
   clientId,
@@ -26,7 +27,7 @@ function VideoUploadField({
     setUploading(true)
     setUploadError(null)
     try {
-      // 1. Pedir URL assinada ao servidor (usa service key, bypass RLS)
+      // 1. Pedir path e token assinado ao servidor (usa service key, bypass RLS)
       const presignResp = await fetch('/api/media/presign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -36,15 +37,14 @@ function VideoUploadField({
         const err = await presignResp.json()
         throw new Error(err.error ?? 'Erro ao gerar URL de upload')
       }
-      const { signedUrl, publicUrl } = await presignResp.json()
+      const { path, token, publicUrl } = await presignResp.json()
 
-      // 2. Upload direto para o Supabase usando a URL assinada (sem passar pelo Vercel)
-      const uploadResp = await fetch(signedUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      })
-      if (!uploadResp.ok) throw new Error('Falha no upload para o storage')
+      // 2. Upload via SDK do Supabase usando o token assinado (sem limite de tamanho)
+      const supabase = createClient()
+      const { error: uploadErr } = await supabase.storage
+        .from('media')
+        .uploadToSignedUrl(path, token, file, { contentType: file.type })
+      if (uploadErr) throw new Error(uploadErr.message)
 
       // 3. Registrar metadados no banco
       await fetch('/api/media/register', {
