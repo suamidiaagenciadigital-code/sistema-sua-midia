@@ -41,6 +41,13 @@ async function postForm(url: string, params: Record<string, string>): Promise<an
   try { return JSON.parse(text) } catch { return {} }
 }
 
+// Troca o System User Token por um Page Access Token (necessário para /photos e /feed)
+async function getPageAccessToken(pageId: string, systemUserToken: string): Promise<string> {
+  const resp = await fetch(`${GRAPH}/${pageId}?fields=access_token&access_token=${systemUserToken}`)
+  const data = await resp.json().catch(() => ({}))
+  return data.access_token ?? systemUserToken
+}
+
 // ── Route ─────────────────────────────────────────────────────────────────
 
 export async function POST(
@@ -91,6 +98,9 @@ export async function POST(
   let igError: string | null = null
 
   // ── Facebook ─────────────────────────────────────────────────────────────
+  // Troca System User Token por Page Access Token para operações na página
+  const fbPageToken = await getPageAccessToken(client.facebook_page_id, pageToken)
+
   try {
     if (isStory) {
       const storyUrls =
@@ -104,8 +114,8 @@ export async function POST(
         const fbResp = await postForm(
           endpoint,
           isVid
-            ? { file_url: resolved, access_token: pageToken }
-            : { url: resolved, access_token: pageToken },
+            ? { file_url: resolved, access_token: fbPageToken }
+            : { url: resolved, access_token: fbPageToken },
         )
         if (fbResp.post_id || fbResp.id) fbPostId = fbResp.post_id || fbResp.id
         if (fbResp.error && !fbPostId) fbError = fbResp.error.message
@@ -115,7 +125,7 @@ export async function POST(
         file_url: resolveVideoUrl(content.generated_image_url) ?? '',
         published: 'true',
         description: content.caption ?? '',
-        access_token: pageToken,
+        access_token: fbPageToken,
       })
       fbPostId = fbResp.id ?? null
       fbError = fbResp.error?.message ?? null
@@ -125,7 +135,7 @@ export async function POST(
         const photoResp = await postForm(`${GRAPH}/${client.facebook_page_id}/photos`, {
           url: resolveUrl(url) ?? '',
           published: 'false',
-          access_token: pageToken,
+          access_token: fbPageToken,
         })
         if (photoResp.id) photoIds.push(photoResp.id)
       }
@@ -134,7 +144,7 @@ export async function POST(
           message: content.caption ?? '',
           attached_media: JSON.stringify(photoIds.map((id) => ({ media_fbid: id }))),
           published: 'true',
-          access_token: pageToken,
+          access_token: fbPageToken,
         })
         fbPostId = fbResp.id ?? null
         fbError = fbResp.error?.message ?? null
@@ -147,8 +157,8 @@ export async function POST(
       const fbResp = await postForm(
         endpoint,
         resolvedImageUrl
-          ? { url: resolvedImageUrl, caption: content.caption ?? '', published: 'true', access_token: pageToken }
-          : { message: content.caption ?? '', published: 'true', access_token: pageToken },
+          ? { url: resolvedImageUrl, caption: content.caption ?? '', published: 'true', access_token: fbPageToken }
+          : { message: content.caption ?? '', published: 'true', access_token: fbPageToken },
       )
       fbPostId = fbResp.id ?? null
       fbError = fbResp.error?.message ?? null
