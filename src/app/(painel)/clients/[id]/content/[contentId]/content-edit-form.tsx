@@ -32,9 +32,10 @@ function VideoUploadField({
       fd.append('clientId', clientId)
       fd.append('tags', JSON.stringify(['reel']))
       const resp = await fetch('/api/media/upload', { method: 'POST', body: fd })
-      if (!resp.ok) throw new Error('Upload falhou')
       const result = await resp.json()
+      if (!resp.ok) throw new Error(result.error ?? 'Upload falhou')
       if (result.file_url) onChange(result.file_url)
+      else throw new Error('URL não retornada pelo servidor')
     } catch (err: any) {
       setUploadError(err.message ?? 'Erro no upload')
     } finally {
