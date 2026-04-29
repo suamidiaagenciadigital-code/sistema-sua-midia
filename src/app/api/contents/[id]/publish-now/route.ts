@@ -24,10 +24,23 @@ function isVideoUrl(url: string | null | undefined): boolean {
   return /\.(mp4|mov|avi|webm|m4v)/i.test(url)
 }
 
-// Google Drive URLs não têm extensão — em stories são tratadas como vídeo
+// Google Drive URLs não têm extensão — verifica Content-Type real para distinguir imagem de vídeo
 function isDriveUrl(url: string | null | undefined): boolean {
   if (!url) return false
   return /drive\.google\.com/.test(url)
+}
+
+async function isVideoDriveUrl(url: string | null | undefined): Promise<boolean> {
+  if (!url) return false
+  if (!isDriveUrl(url)) return isVideoUrl(url)
+  try {
+    const videoUrl = resolveVideoUrl(url) ?? url
+    const resp = await fetch(videoUrl, { method: 'HEAD' })
+    const ct = resp.headers.get('content-type') ?? ''
+    return ct.startsWith('video/')
+  } catch {
+    return false
+  }
 }
 
 async function postForm(url: string, params: Record<string, string>): Promise<any> {
@@ -106,7 +119,7 @@ export async function POST(
       const storyUrls =
         mediaUrls.length > 0 ? mediaUrls : resolvedImageUrl ? [resolvedImageUrl] : []
       for (const frameUrl of storyUrls) {
-        const isVid = isVideoUrl(frameUrl) || isDriveUrl(frameUrl)
+        const isVid = await isVideoDriveUrl(frameUrl)
         const resolved = isVid ? resolveVideoUrl(frameUrl)! : resolveUrl(frameUrl)!
         const endpoint = isVid
           ? `${GRAPH}/${client.facebook_page_id}/video_stories`
@@ -230,7 +243,7 @@ export async function POST(
         const storyUrls =
           mediaUrls.length > 0 ? mediaUrls : resolvedImageUrl ? [resolvedImageUrl] : []
         for (const frameUrl of storyUrls) {
-          const isVid = isVideoUrl(frameUrl) || isDriveUrl(frameUrl)
+          const isVid = await isVideoDriveUrl(frameUrl)
           const resolved = isVid ? resolveVideoUrl(frameUrl)! : resolveUrl(frameUrl)!
           const storyParams: Record<string, string> = { media_type: 'STORIES', access_token: pageToken }
           if (isVid) storyParams.video_url = resolved
