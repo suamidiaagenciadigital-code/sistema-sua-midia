@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
+// Publicação pode demorar até 3 min aguardando processamento do vídeo no Instagram
+export const maxDuration = 300
+export const dynamic = 'force-dynamic'
+
 const GRAPH = 'https://graph.facebook.com/v21.0'
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -199,7 +203,8 @@ export async function POST(
         access_token: fbPageToken,
       })
       fbPostId = fbResp.id ?? null
-      fbError = fbResp.error?.message ?? null
+      // Capturar erro em qualquer formato que o Facebook retornar
+      fbError = fbResp.error?.message ?? (fbResp.error ? JSON.stringify(fbResp.error) : null)
     } else if (type === 'carrossel' && mediaUrls.length >= 2) {
       const photoIds: string[] = []
       for (const url of mediaUrls) {
@@ -247,13 +252,23 @@ export async function POST(
       if (container.error) return { post_id: null as string | null, error: container.error.message as string }
       if (!container.id) return { post_id: null, error: 'Instagram não retornou creation_id' }
 
-      // Aguardar container ficar FINISHED (Instagram precisa processar a mídia)
-      for (let t = 0; t < 20; t++) {
-        const st = await fetch(`${GRAPH}/${container.id}?fields=status_code&access_token=${pageToken}`)
+      // Aguardar container ficar FINISHED (Instagram pode demorar ~2-3 min para vídeos)
+      // 45 iterações × 4s = 3 minutos de polling máximo
+      let finished = false
+      for (let t = 0; t < 45; t++) {
+        await new Promise((r) => setTimeout(r, 4000))
+        const st = await fetch(`${GRAPH}/${container.id}?fields=status_code,status&access_token=${pageToken}`)
           .then((r) => r.json()).catch(() => ({}))
-        if (st.status_code === 'FINISHED') break
-        if (st.status_code === 'ERROR') return { post_id: null, error: 'IG media error: ' + JSON.stringify(st) }
-        await new Promise((r) => setTimeout(r, 2000))
+        if (st.status_code === 'FINISHED') { finished = true; break }
+        if (st.status_code === 'ERROR') {
+          const detail = st.status ?? JSON.stringify(st)
+          return { post_id: null, error: `IG processamento falhou: ${detail}` }
+        }
+        // IN_PROGRESS ou sem status_code — continua aguardando
+      }
+
+      if (!finished) {
+        return { post_id: null, error: 'Instagram está processando o vídeo (demorou mais de 3 min). Tente publicar novamente em alguns minutos.' }
       }
 
       const publish = await postForm(`${GRAPH}/${igId}/media_publish`, {
