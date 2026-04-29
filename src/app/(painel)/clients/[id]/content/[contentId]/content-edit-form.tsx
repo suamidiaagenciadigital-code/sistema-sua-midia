@@ -245,12 +245,21 @@ function PreviewPanel({
               </div>
             ) : isReel && imageUrl.trim() ? (
               <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
-                <iframe
-                  src={getDriveEmbedUrl(imageUrl)}
-                  allow="autoplay; fullscreen"
-                  allowFullScreen
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                />
+                {imageUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(imageUrl) ? (
+                  <video
+                    src={imageUrl}
+                    controls
+                    playsInline
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <iframe
+                    src={getDriveEmbedUrl(imageUrl)}
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                  />
+                )}
               </div>
             ) : imageUrl.trim() ? (
               <div className="w-full bg-zinc-800" style={{ aspectRatio: '4/5' }}>
@@ -432,10 +441,29 @@ export function ContentEditForm({
     setPublishing(true)
     setPublishResult(null)
     try {
-      const res = await fetch(`/api/contents/${contentId}/publish-now`, { method: 'POST' })
+      // Envia a URL atual do formulário para garantir que a versão mais recente seja publicada
+      // (evita publicar URL antiga do banco quando o vídeo foi trocado sem salvar)
+      const body: Record<string, string> = {}
+      if (content.type === 'reel' && imageUrl) body.override_video_url = imageUrl
+      if (content.type === 'story' && mediaUrlsText) body.override_media_urls = mediaUrlsText
+      if (content.type === 'carrossel' && mediaUrlsText) body.override_media_urls = mediaUrlsText
+      if (content.type === 'imagem' && imageUrl) body.override_video_url = imageUrl
+
+      const res = await fetch(`/api/contents/${contentId}/publish-now`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erro ao publicar')
-      setPublishResult({ ok: true, msg: 'Publicado com sucesso!' })
+
+      // Mostrar resultado detalhado por plataforma
+      const fb = data.facebook
+      const ig = data.instagram
+      const fbMsg = fb?.post_id ? '✅ Facebook' : `❌ Facebook: ${fb?.error ?? 'erro'}`
+      const igMsg = ig?.post_id ? '✅ Instagram' : ig ? `❌ Instagram: ${ig?.error ?? 'erro'}` : ''
+      const allOk = !!fb?.post_id && (!ig || !!ig?.post_id)
+      setPublishResult({ ok: allOk, msg: [fbMsg, igMsg].filter(Boolean).join(' | ') })
     } catch (e) {
       setPublishResult({ ok: false, msg: e instanceof Error ? e.message : 'Erro ao publicar' })
     } finally {

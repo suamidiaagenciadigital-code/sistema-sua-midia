@@ -194,12 +194,21 @@ export default async function PublicApprovalPage({ params }: Props) {
                     <MediaCarousel urls={c.media_urls!} />
                   ) : isReel && singleUrl ? (
                     <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
-                      <iframe
-                        src={getDriveEmbedUrl(singleUrl)!}
-                        allow="autoplay; fullscreen"
-                        allowFullScreen
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                      />
+                      {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
+                        <video
+                          src={singleUrl}
+                          controls
+                          playsInline
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                      ) : (
+                        <iframe
+                          src={getDriveEmbedUrl(singleUrl)!}
+                          allow="autoplay; fullscreen"
+                          allowFullScreen
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                        />
+                      )}
                     </div>
                   ) : singleUrl ? (
                     <div className="w-full bg-zinc-900" style={{ aspectRatio: '4/5' }}>

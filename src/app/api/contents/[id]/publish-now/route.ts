@@ -103,11 +103,16 @@ async function getPageAccessToken(pageId: string, systemUserToken: string): Prom
 // ── Route ─────────────────────────────────────────────────────────────────
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: contentId } = await params
   const supabase = createServiceClient()
+
+  // Aceitar overrides do formulário (URL atual que pode não ter sido salva no banco ainda)
+  const body = await req.json().catch(() => ({}))
+  const overrideVideoUrl: string | null = body?.override_video_url ?? null
+  const overrideMediaUrls: string | null = body?.override_media_urls ?? null
 
   // Buscar conteúdo
   const { data: content } = await supabase
@@ -140,16 +145,23 @@ export async function POST(
   const type = (content.type as string) || 'imagem'
   const isStory = type === 'story'
 
+  // Usar override do formulário se fornecido (usuário pode ter trocado o vídeo sem salvar)
+  let generatedImageUrl: string | null = overrideVideoUrl ?? (content.generated_image_url as string | null)
+
+  // Parsear media_urls: override tem prioridade (texto com linhas) ou banco (array)
+  let mediaUrls: string[] = []
+  if (overrideMediaUrls) {
+    mediaUrls = overrideMediaUrls.split('\n').map((u: string) => u.trim()).filter(Boolean)
+  } else if (Array.isArray(content.media_urls)) {
+    mediaUrls = (content.media_urls as string[]).filter(Boolean)
+  }
+
   // Re-hospedar vídeo do Drive no Supabase antes de publicar (necessário para Instagram)
-  let generatedImageUrl = content.generated_image_url as string | null
   if ((type === 'reel') && isDriveUrl(generatedImageUrl)) {
     generatedImageUrl = await rehostDriveVideoForPublish(generatedImageUrl!, content.client_id, supabase)
   }
 
   const resolvedImageUrl = resolveUrl(generatedImageUrl)
-  const mediaUrls: string[] = Array.isArray(content.media_urls)
-    ? (content.media_urls as string[]).filter(Boolean)
-    : []
 
   let fbPostId: string | null = null
   let fbError: string | null = null
