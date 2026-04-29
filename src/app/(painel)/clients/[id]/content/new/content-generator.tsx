@@ -5,8 +5,92 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2,
-  PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays, Send, Loader2,
+  PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays, Send, Loader2, Upload,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+
+// ── Upload direto do browser para Supabase via URL assinada ──────────────
+function VideoUploadField({
+  clientId,
+  value,
+  onChange,
+}: {
+  clientId: string
+  value: string
+  onChange: (url: string) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const inputClass = "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500"
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const presignResp = await fetch('/api/media/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, fileName: file.name, contentType: file.type }),
+      })
+      if (!presignResp.ok) {
+        const err = await presignResp.json()
+        throw new Error(err.error ?? 'Erro ao gerar URL de upload')
+      }
+      const { path, token, publicUrl } = await presignResp.json()
+      const supabase = createClient()
+      const { error: uploadErr } = await supabase.storage
+        .from('media')
+        .uploadToSignedUrl(path, token, file, { contentType: file.type })
+      if (uploadErr) throw new Error(uploadErr.message)
+      await fetch('/api/media/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, file_url: publicUrl, file_type: 'video', original_name: file.name, size_bytes: file.size, tags: ['reel'] }),
+      })
+      onChange(publicUrl)
+    } catch (err: any) {
+      setUploadError(err.message ?? 'Erro no upload')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <input
+          type="url"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Cole o link do Supabase ou use o botão abaixo"
+          className={inputClass + ' flex-1'}
+        />
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+        >
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          {uploading ? 'Enviando vídeo...' : 'Subir vídeo do computador'}
+        </button>
+        <span className="text-xs text-zinc-500">MP4, MOV, WebM</span>
+      </div>
+      <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFile} />
+      {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
+      {value && value.includes('supabase') && (
+        <p className="text-xs text-green-400">✓ Vídeo hospedado no Supabase — pronto para Instagram</p>
+      )}
+    </div>
+  )
+}
 
 interface Generated {
   title: string
@@ -154,12 +238,21 @@ function PreviewPanel({
               </div>
             ) : isReel && creativeUrl.trim() ? (
               <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
-                <iframe
-                  src={getDriveEmbedUrl(creativeUrl)}
-                  allow="autoplay; fullscreen"
-                  allowFullScreen
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
-                />
+                {creativeUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(creativeUrl) ? (
+                  <video
+                    src={creativeUrl}
+                    controls
+                    playsInline
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <iframe
+                    src={getDriveEmbedUrl(creativeUrl)}
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
+                  />
+                )}
               </div>
             ) : creativeUrl.trim() ? (
               <div className="w-full bg-zinc-800" style={{ aspectRatio: '4/5' }}>
@@ -649,20 +742,28 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                   ) : (
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-                        {type === 'reel' ? 'URL do vídeo (Google Drive)' : 'URL do criativo (imagem)'}
+                        {type === 'reel' ? 'Vídeo' : 'URL do criativo (imagem)'}
                       </label>
-                      <input
-                        type="url"
-                        value={creativeUrl}
-                        onChange={e => setCreativeUrl(e.target.value)}
-                        placeholder="https://drive.google.com/file/d/.../view"
-                        className={base}
-                      />
-                      <p className="text-xs text-zinc-500">
-                        {type === 'reel'
-                          ? 'Link do vídeo no Google Drive. O preview ao lado mostra o player.'
-                          : 'Link da imagem no Google Drive ou URL pública. O preview ao lado atualiza na hora.'}
-                      </p>
+                      {type === 'reel' ? (
+                        <VideoUploadField
+                          clientId={clientId}
+                          value={creativeUrl}
+                          onChange={setCreativeUrl}
+                        />
+                      ) : (
+                        <>
+                          <input
+                            type="url"
+                            value={creativeUrl}
+                            onChange={e => setCreativeUrl(e.target.value)}
+                            placeholder="https://drive.google.com/file/d/.../view"
+                            className={base}
+                          />
+                          <p className="text-xs text-zinc-500">
+                            Link da imagem no Google Drive ou URL pública. O preview ao lado atualiza na hora.
+                          </p>
+                        </>
+                      )}
                     </div>
                   )}
 
