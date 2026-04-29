@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     tags,
     original_name: file.name,
     size_bytes: file.size,
-  }).select('id').single()
+  }).select('id, file_url').single()
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
