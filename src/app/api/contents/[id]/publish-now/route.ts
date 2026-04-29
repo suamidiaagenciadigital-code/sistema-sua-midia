@@ -43,6 +43,45 @@ async function isVideoDriveUrl(url: string | null | undefined): Promise<boolean>
   }
 }
 
+// Re-hospeda vídeo do Drive no Supabase Storage e retorna URL pública permanente
+async function rehostDriveVideoForPublish(
+  driveUrl: string,
+  clientId: string,
+  supabase: ReturnType<typeof createServiceClient>,
+): Promise<string> {
+  try {
+    const match = driveUrl.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([^/?&]+)/)
+    if (!match) return driveUrl
+    const fileId = match[1]
+    const downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
+
+    const videoResp = await fetch(downloadUrl)
+    if (!videoResp.ok) return driveUrl
+
+    const contentType = videoResp.headers.get('content-type') ?? 'video/mp4'
+    if (!contentType.startsWith('video/')) return driveUrl
+
+    const buffer = await videoResp.arrayBuffer()
+    const ext = contentType.split('/')[1]?.split(';')[0]?.trim() ?? 'mp4'
+    const path = `${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+
+    const { error } = await supabase.storage
+      .from('media')
+      .upload(path, new Uint8Array(buffer), { contentType })
+
+    if (error) return driveUrl
+
+    // Salvar URL no banco para evitar re-hospedar toda vez
+    await supabase.from('contents').update({ generated_image_url: supabase.storage.from('media').getPublicUrl(path).data.publicUrl })
+      .eq('client_id', clientId)
+      .eq('generated_image_url', driveUrl)
+
+    return supabase.storage.from('media').getPublicUrl(path).data.publicUrl
+  } catch {
+    return driveUrl
+  }
+}
+
 async function postForm(url: string, params: Record<string, string>): Promise<any> {
   const body = new URLSearchParams(params).toString()
   const resp = await fetch(url, {
@@ -100,7 +139,14 @@ export async function POST(
 
   const type = (content.type as string) || 'imagem'
   const isStory = type === 'story'
-  const resolvedImageUrl = resolveUrl(content.generated_image_url)
+
+  // Re-hospedar vídeo do Drive no Supabase antes de publicar (necessário para Instagram)
+  let generatedImageUrl = content.generated_image_url as string | null
+  if ((type === 'reel') && isDriveUrl(generatedImageUrl)) {
+    generatedImageUrl = await rehostDriveVideoForPublish(generatedImageUrl!, content.client_id, supabase)
+  }
+
+  const resolvedImageUrl = resolveUrl(generatedImageUrl)
   const mediaUrls: string[] = Array.isArray(content.media_urls)
     ? (content.media_urls as string[]).filter(Boolean)
     : []
@@ -135,7 +181,7 @@ export async function POST(
       }
     } else if (type === 'reel') {
       const fbResp = await postForm(`${GRAPH}/${client.facebook_page_id}/videos`, {
-        file_url: resolveVideoUrl(content.generated_image_url) ?? '',
+        file_url: resolveVideoUrl(generatedImageUrl) ?? '',
         published: 'true',
         description: content.caption ?? '',
         access_token: fbPageToken,
@@ -233,7 +279,7 @@ export async function POST(
       } else if (type === 'reel') {
         const res = await igCreateAndPublish({
           media_type: 'REELS',
-          video_url: resolveVideoUrl(content.generated_image_url) ?? '',
+          video_url: generatedImageUrl ?? '',  // já rehospedado no Supabase
           caption: content.caption ?? '',
           access_token: pageToken,
         })
