@@ -184,6 +184,34 @@
   opacity: 0.9;
 }
 
+/* Nav sidebar */
+.lumina-nav-item {
+  color: #64748b;
+  border-left: 3px solid transparent;
+}
+.lumina-nav-item:hover {
+  color: #cbd5e1;
+  background-color: rgba(255, 255, 255, 0.04);
+}
+.lumina-nav-active {
+  background: linear-gradient(to right, rgba(43,128,255,0.18), rgba(168,85,247,0.08)) !important;
+  border-left: 3px solid #2B80FF !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+.lumina-nav-active:hover {
+  background: linear-gradient(to right, rgba(43,128,255,0.22), rgba(168,85,247,0.12)) !important;
+}
+
+.lumina-quick-action {
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.lumina-quick-action:hover {
+  border-color: rgba(43, 128, 255, 0.4);
+  background-color: rgba(43, 128, 255, 0.06);
+}
+
 /* Scrollbar estilizada */
 ::-webkit-scrollbar {
   width: 6px;

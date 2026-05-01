@@ -165,16 +165,7 @@ export default async function DashboardPage() {
             <Link
               key={label}
               href={href}
-              className="px-3 py-2.5 text-sm text-slate-400 hover:text-white transition-all text-center rounded-lg"
-              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-              onMouseEnter={e => {
-                ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(43,128,255,0.4)'
-                ;(e.currentTarget as HTMLElement).style.color = '#ffffff'
-              }}
-              onMouseLeave={e => {
-                ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'
-                ;(e.currentTarget as HTMLElement).style.color = '#64748b'
-              }}
+              className="px-3 py-2.5 text-sm text-slate-500 hover:text-white transition-colors text-center rounded-lg lumina-quick-action"
             >
               {label}
             </Link>

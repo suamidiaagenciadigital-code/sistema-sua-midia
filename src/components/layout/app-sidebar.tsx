@@ -74,32 +74,7 @@ export function AppSidebar() {
             <Link
               key={href}
               href={href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150"
-              style={
-                active
-                  ? {
-                      background: 'linear-gradient(to right, rgba(43,128,255,0.18), rgba(168,85,247,0.08))',
-                      borderLeft: '3px solid #2B80FF',
-                      color: '#ffffff',
-                      fontWeight: 600,
-                    }
-                  : {
-                      borderLeft: '3px solid transparent',
-                      color: '#64748b',
-                    }
-              }
-              onMouseEnter={e => {
-                if (!active) {
-                  ;(e.currentTarget as HTMLElement).style.color = '#cbd5e1'
-                  ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.04)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!active) {
-                  ;(e.currentTarget as HTMLElement).style.color = '#64748b'
-                  ;(e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'
-                }
-              }}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 lumina-nav-item ${active ? 'lumina-nav-active' : ''}`}
             >
               <Icon
                 className="h-4 w-4 shrink-0"
