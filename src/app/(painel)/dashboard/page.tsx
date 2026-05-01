@@ -27,10 +27,38 @@ export default async function DashboardPage() {
   ])
 
   const metrics = [
-    { label: 'Clientes ativos', value: totalClients ?? 0, icon: Users, color: 'text-blue-400' },
-    { label: 'Aguardando aprovação', value: pendingApprovals ?? 0, icon: Clock, color: 'text-yellow-400' },
-    { label: 'Agendados esta semana', value: scheduledThisWeek ?? 0, icon: CalendarCheck, color: 'text-green-400' },
-    { label: 'Atendimentos abertos', value: openTickets ?? 0, icon: MessageSquare, color: 'text-red-400' },
+    {
+      label: 'Clientes ativos',
+      value: totalClients ?? 0,
+      icon: Users,
+      gradient: 'from-blue-500/20 to-blue-600/10',
+      iconColor: '#2B80FF',
+      border: 'rgba(43,128,255,0.25)',
+    },
+    {
+      label: 'Aguardando aprovação',
+      value: pendingApprovals ?? 0,
+      icon: Clock,
+      gradient: 'from-amber-500/20 to-amber-600/10',
+      iconColor: '#f59e0b',
+      border: 'rgba(245,158,11,0.25)',
+    },
+    {
+      label: 'Agendados esta semana',
+      value: scheduledThisWeek ?? 0,
+      icon: CalendarCheck,
+      gradient: 'from-emerald-500/20 to-emerald-600/10',
+      iconColor: '#34d399',
+      border: 'rgba(52,211,153,0.25)',
+    },
+    {
+      label: 'Atendimentos abertos',
+      value: openTickets ?? 0,
+      icon: MessageSquare,
+      gradient: 'from-purple-500/20 to-purple-600/10',
+      iconColor: '#A855F7',
+      border: 'rgba(168,85,247,0.25)',
+    },
   ]
 
   const typeLabel: Record<string, string> = {
@@ -46,47 +74,78 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Título */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="text-zinc-400 text-sm mt-1">Visão geral da agência</p>
+        <h1 className="text-2xl font-extrabold text-white">Dashboard</h1>
+        <p className="text-slate-500 text-sm mt-1">Visão geral da agência</p>
       </div>
 
       {/* Cards de métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {metrics.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 flex items-start justify-between">
+        {metrics.map(({ label, value, icon: Icon, iconColor, border }) => (
+          <div
+            key={label}
+            className="rounded-lg p-5 flex items-start justify-between"
+            style={{ backgroundColor: '#131b2e', border: `1px solid ${border}` }}
+          >
             <div>
-              <p className="text-sm text-zinc-400">{label}</p>
-              <p className="text-3xl font-bold text-white mt-1">{value}</p>
+              <p className="text-sm text-slate-500">{label}</p>
+              <p className="text-3xl font-extrabold text-white mt-1">{value}</p>
             </div>
-            <Icon className={`h-5 w-5 ${color} mt-0.5`} />
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+              style={{ backgroundColor: `${iconColor}20` }}
+            >
+              <Icon className="h-4.5 w-4.5" style={{ color: iconColor, width: 18, height: 18 }} />
+            </div>
           </div>
         ))}
       </div>
 
       {/* Próximos para aprovar */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+      <div
+        className="rounded-lg p-5"
+        style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-white">Próximos conteúdos para aprovar</h2>
-          <Link href="/approvals" className="text-xs text-zinc-400 hover:text-white transition-colors">Ver todos →</Link>
+          <Link
+            href="/approvals"
+            className="text-xs font-medium transition-colors"
+            style={{ color: '#2B80FF' }}
+          >
+            Ver todos →
+          </Link>
         </div>
+
         {!nextContents?.length ? (
-          <div className="flex flex-col items-center justify-center py-8 text-zinc-600">
+          <div className="flex flex-col items-center justify-center py-10 text-slate-600">
             <Clock className="h-7 w-7 mb-2" />
             <p className="text-sm">Nenhum conteúdo pendente</p>
           </div>
         ) : (
-          <div className="divide-y divide-zinc-800">
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             {nextContents.map((c: any) => (
-              <div key={c.id} className="flex items-center justify-between py-3">
+              <div
+                key={c.id}
+                className="flex items-center justify-between py-3"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+              >
                 <div>
                   <p className="text-sm text-white font-medium">{c.title}</p>
-                  <p className="text-xs text-zinc-500 mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     {(c.clients as any)?.name} · {typeLabel[c.type] ?? c.type}
                     {c.scheduled_date ? ` · ${new Date(c.scheduled_date).toLocaleDateString('pt-BR')}` : ''}
                   </p>
                 </div>
-                <span className="text-xs bg-yellow-900/40 text-yellow-400 border border-yellow-800 px-2 py-0.5 rounded">
+                <span
+                  className="text-xs px-2.5 py-1 rounded-full font-medium"
+                  style={{
+                    backgroundColor: 'rgba(245,158,11,0.12)',
+                    color: '#f59e0b',
+                    border: '1px solid rgba(245,158,11,0.25)',
+                  }}
+                >
                   Pendente
                 </span>
               </div>
@@ -95,13 +154,28 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Atalhos */}
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+      {/* Atalhos rápidos */}
+      <div
+        className="rounded-lg p-5"
+        style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
         <h2 className="text-sm font-semibold text-white mb-4">Atalhos rápidos</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {quickActions.map(({ label, href }) => (
-            <Link key={label} href={href}
-              className="rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2.5 text-sm text-zinc-300 hover:text-white hover:border-zinc-600 transition-colors text-center">
+            <Link
+              key={label}
+              href={href}
+              className="px-3 py-2.5 text-sm text-slate-400 hover:text-white transition-all text-center rounded-lg"
+              style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+              onMouseEnter={e => {
+                ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(43,128,255,0.4)'
+                ;(e.currentTarget as HTMLElement).style.color = '#ffffff'
+              }}
+              onMouseLeave={e => {
+                ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'
+                ;(e.currentTarget as HTMLElement).style.color = '#64748b'
+              }}
+            >
               {label}
             </Link>
           ))}

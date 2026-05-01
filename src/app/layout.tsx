@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
+  weight: ["400", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -18,8 +19,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="h-full bg-zinc-950 text-zinc-100" suppressHydrationWarning>{children}</body>
+    <html lang="pt-BR" className={`${manrope.variable} h-full antialiased`}>
+      <body className="h-full text-slate-100" style={{ backgroundColor: '#0b1326', fontFamily: 'var(--font-manrope), sans-serif' }} suppressHydrationWarning>{children}</body>
     </html>
   );
 }

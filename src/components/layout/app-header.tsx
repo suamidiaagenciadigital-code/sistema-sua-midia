@@ -7,14 +7,20 @@ export async function AppHeader() {
   const { data: { user } } = await supabase.auth.getUser()
 
   return (
-    <header className="h-14 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between px-6 shrink-0">
+    <header
+      className="h-14 flex items-center justify-between px-6 shrink-0"
+      style={{
+        backgroundColor: '#0f1929',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+      }}
+    >
       <div />
       <div className="flex items-center gap-4">
-        <span className="text-sm text-zinc-400">{user?.email}</span>
+        <span className="text-sm text-slate-500">{user?.email}</span>
         <form action={logout}>
           <button
             type="submit"
-            className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-white transition-colors"
           >
             <LogOut className="h-4 w-4" />
             Sair
