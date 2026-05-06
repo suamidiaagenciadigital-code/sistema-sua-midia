@@ -24,13 +24,13 @@ const navItems = [
 function SuaMidiaLogo() {
   return (
     <Image
-      src="/logo-suamidia.svg"
-      alt="Sua Mídia"
-      width={170}
-      height={44}
+      src="/logotipo-2023 (horizontal) - branco.png"
+      alt="Sua Mídia — Agência Digital"
+      width={180}
+      height={48}
       priority
       className="w-auto"
-      style={{ maxHeight: 44 }}
+      style={{ maxHeight: 48 }}
     />
   )
 }

@@ -25,9 +25,9 @@ export default async function LoginPage({ searchParams }: Props) {
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">
           <Image
-            src="/logo-suamidia.svg"
+            src="/logotipo-2023 (horizontal) - branco.png"
             alt="Sua Mídia — Agência Digital"
-            width={300}
+            width={280}
             height={75}
             priority
             className="w-auto"
