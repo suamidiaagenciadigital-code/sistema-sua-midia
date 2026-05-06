@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 130" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2B80FF"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2B80FF"/>
+      <stop offset="100%" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Swoosh icon — asa superior (stroke bold) -->
+  <path
+    d="M8 95 C10 70, 18 48, 35 32 C50 18, 68 12, 82 16 C96 20, 104 32, 100 46 C96 58, 84 65, 72 63 C60 61, 52 52, 56 43 C60 34, 73 36, 75 46"
+    stroke="url(#g1)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Swoosh icon — asa inferior (stroke fino, pontuda) -->
+  <path
+    d="M8 105 C22 96, 40 97, 58 103 C72 108, 86 106, 96 97"
+    stroke="url(#g1)" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.6"/>
+
+  <!-- Texto SUA MÍDIA (branco) -->
+  <text x="118" y="72" font-family="Manrope, sans-serif" font-size="52" font-weight="800" fill="#ffffff" letter-spacing="-1">SUA MÍDIA</text>
+
+  <!-- Texto AGÊNCIA DIGITAL (gradiente) -->
+  <text x="119" y="100" font-family="Manrope, sans-serif" font-size="18" font-weight="700" fill="url(#g2)" letter-spacing="3">AGÊNCIA DIGITAL</text>
+</svg>

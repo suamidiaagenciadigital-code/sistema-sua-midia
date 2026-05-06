@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
@@ -22,31 +23,15 @@ const navItems = [
 
 function SuaMidiaLogo() {
   return (
-    <div className="flex items-center gap-3">
-      {/* Ícone swoosh — gradiente azul→roxo */}
-      <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-        <defs>
-          <linearGradient id="lg-sidebar" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2B80FF" />
-            <stop offset="100%" stopColor="#A855F7" />
-          </linearGradient>
-        </defs>
-        {/* Lâmina superior */}
-        <path
-          d="M12 72 C18 40, 38 18, 62 14 C78 11, 90 22, 88 42 C86 58, 70 66, 54 63 C40 60, 32 50, 38 40 C44 30, 60 33, 62 46"
-          stroke="url(#lg-sidebar)" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none"
-        />
-        {/* Lâmina inferior — asa */}
-        <path
-          d="M12 80 C28 70, 46 72, 62 78 C74 83, 86 78, 90 68"
-          stroke="url(#lg-sidebar)" strokeWidth="7" strokeLinecap="round" fill="none" opacity="0.55"
-        />
-      </svg>
-      <div className="leading-none">
-        <p className="text-base font-extrabold text-white tracking-tight">Sua Mídia</p>
-        <p className="text-[10px] font-semibold tracking-widest mt-0.5 lumina-gradient-text uppercase">Agência Digital</p>
-      </div>
-    </div>
+    <Image
+      src="/logo-suamidia.svg"
+      alt="Sua Mídia"
+      width={170}
+      height={44}
+      priority
+      className="w-auto"
+      style={{ maxHeight: 44 }}
+    />
   )
 }
 
