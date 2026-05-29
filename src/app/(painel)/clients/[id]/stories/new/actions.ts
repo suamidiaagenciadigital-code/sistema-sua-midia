@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { scheduleStory } from '@/lib/facebook'
+import { getMetaToken } from '@/lib/meta-token'
 import { redirect } from 'next/navigation'
 
 export async function createStoryAction(clientId: string, formData: FormData) {
@@ -41,10 +42,11 @@ export async function createStoryAction(clientId: string, formData: FormData) {
     .single()
 
   // Agendar nas redes sociais
-  if (client?.facebook_page_id && client?.facebook_page_token) {
+  const pageToken = getMetaToken(client?.facebook_page_token)
+  if (client?.facebook_page_id && pageToken) {
     const result = await scheduleStory({
       pageId:            client.facebook_page_id,
-      pageToken:         client.facebook_page_token,
+      pageToken,
       igAccountId:       client.instagram_account_id ?? null,
       mediaUrl,
       mediaType,

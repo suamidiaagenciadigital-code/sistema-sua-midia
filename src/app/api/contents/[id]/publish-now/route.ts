@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getMetaToken } from '@/lib/meta-token'
 
 // Publicação pode demorar até 3 min aguardando processamento do vídeo no Instagram
 export const maxDuration = 300
@@ -25,7 +26,7 @@ function resolveVideoUrl(url: string | null | undefined): string | null {
 
 function isVideoUrl(url: string | null | undefined): boolean {
   if (!url) return false
-  return /\.(mp4|mov|avi|webm|m4v)/i.test(url)
+  return /\.(mp4|mov|avi|webm|m4v)(\?|$)/i.test(url)
 }
 
 // Google Drive URLs não têm extensão — verifica Content-Type real para distinguir imagem de vídeo
@@ -136,15 +137,14 @@ export async function POST(
     .eq('id', content.client_id)
     .single()
 
-  if (!client?.facebook_page_id || !client?.facebook_page_token) {
+  const pageToken = getMetaToken(client?.facebook_page_token)
+
+  if (!client?.facebook_page_id || !pageToken) {
     return NextResponse.json(
       { error: 'Integrações Meta não configuradas para este cliente' },
       { status: 400 },
     )
   }
-
-  // System User Token — não expira, não precisa de aprovação do app Meta
-  const pageToken: string = 'EAAU7TJPfNhABRWZBZBoG8ZBcvD0Mh46CeyOjfSEXk9vMxqSZANTZB78FtzxbDgT6QjjjFFRnJFsrsKBE9oQwl53emkTELkbclUrFgKKYT8ZANEDluKhCc83Wk68QUrpYJi12jUqtZBp8DhfIsUbKY7X2n0SQJ3BLoZAojN4oP3KLy5owgRBuwMBUkcxrTzqclAZDZD'
 
   const type = (content.type as string) || 'imagem'
   const isStory = type === 'story'
@@ -160,9 +160,20 @@ export async function POST(
     mediaUrls = (content.media_urls as string[]).filter(Boolean)
   }
 
-  // Re-hospedar vídeo do Drive no Supabase antes de publicar (necessário para Instagram)
+  // Para Reels: o Instagram não consegue baixar vídeos direto do Google Drive.
+  // É obrigatório re-hospedar no Supabase antes de publicar.
   if ((type === 'reel') && isDriveUrl(generatedImageUrl)) {
-    generatedImageUrl = await rehostDriveVideoForPublish(generatedImageUrl!, content.client_id, supabase)
+    const rehosted = await rehostDriveVideoForPublish(generatedImageUrl!, content.client_id, supabase)
+    if (isDriveUrl(rehosted)) {
+      // Rehosting falhou (arquivo privado, muito grande, ou Drive bloqueou o download)
+      return NextResponse.json({
+        ok: false,
+        facebook: { post_id: null, error: 'O vídeo está no Google Drive e não pôde ser baixado automaticamente. Use o botão "Subir vídeo do computador" para hospedar no Supabase e tente publicar novamente.' },
+        instagram: { post_id: null, error: 'O vídeo está no Google Drive e não pôde ser baixado automaticamente. Use o botão "Subir vídeo do computador" para hospedar no Supabase e tente publicar novamente.' },
+      })
+    }
+    // Rehosting OK → usa URL pública permanente do Supabase
+    generatedImageUrl = rehosted
   }
 
   const resolvedImageUrl = resolveUrl(generatedImageUrl)
@@ -245,11 +256,15 @@ export async function POST(
 
   // ── Instagram ─────────────────────────────────────────────────────────────
   if (client.instagram_account_id) {
-    const igId = client.instagram_account_id
+    const igId = client.instagram_account_id.trim()
 
     const igCreateAndPublish = async (containerParams: Record<string, string>) => {
       const container = await postForm(`${GRAPH}/${igId}/media`, containerParams)
-      if (container.error) return { post_id: null as string | null, error: container.error.message as string }
+      if (container.error) {
+        const e = container.error
+        const detail = `${e.message} (type: ${e.type ?? '?'}, code: ${e.code ?? '?'}${e.error_subcode ? `, subcode: ${e.error_subcode}` : ''})`
+        return { post_id: null as string | null, error: detail }
+      }
       if (!container.id) return { post_id: null, error: 'Instagram não retornou creation_id' }
 
       // Aguardar container ficar FINISHED (Instagram pode demorar ~2-3 min para vídeos)
@@ -306,8 +321,9 @@ export async function POST(
       } else if (type === 'reel') {
         const res = await igCreateAndPublish({
           media_type: 'REELS',
-          video_url: generatedImageUrl ?? '',  // já rehospedado no Supabase
+          video_url: resolveVideoUrl(generatedImageUrl) ?? generatedImageUrl ?? '',  // mesma lógica do story
           caption: content.caption ?? '',
+          share_to_feed: 'true',
           access_token: pageToken,
         })
         igPostId = res.post_id

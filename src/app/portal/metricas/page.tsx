@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getMetaToken } from '@/lib/meta-token'
 import PortalNav from '@/app/portal/_components/portal-nav'
 import PortalMetricas from '@/app/portal/_components/portal-metricas'
 
@@ -81,7 +82,8 @@ export default async function MetricasPage() {
 
   if (!client) redirect('/portal/login')
 
-  const hasConfig = !!(client.instagram_account_id && client.facebook_page_token)
+  const resolvedToken = getMetaToken(client.facebook_page_token)
+  const hasConfig = !!(client.instagram_account_id && resolvedToken)
   let metrics = null
   let error: string | null = null
 
@@ -89,7 +91,7 @@ export default async function MetricasPage() {
     try {
       metrics = await fetchInstagramMetrics(
         client.instagram_account_id as string,
-        client.facebook_page_token as string
+        resolvedToken
       )
       if (metrics.account?.error) {
         error = `Erro da API: ${metrics.account.error.message}`

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getMetaToken } from '@/lib/meta-token'
 
 export async function POST(req: NextRequest) {
   const { contentId, token, status, revisionNotes } = await req.json()
@@ -41,6 +42,19 @@ export async function POST(req: NextRequest) {
 
   await supabase.from('contents').update(update).eq('id', contentId)
 
+  // ── Auto-aprovar stories do mesmo dia ────────────────────────────────────
+  // Quando o cliente aprova um post do feed, os stories agendados para o mesmo
+  // dia são automaticamente aprovados (não precisam aparecer na tela do cliente).
+  if (status === 'approved_by_client' && content.scheduled_date) {
+    await supabase
+      .from('contents')
+      .update({ status: 'approved_by_client' })
+      .eq('client_id', content.client_id)
+      .eq('type', 'story')
+      .eq('scheduled_date', content.scheduled_date)
+      .eq('status', 'sent_to_client')
+  }
+
   // ── Acionar n8n para publicar no Meta ───────────────────────────────────
   const socialResult: {
     facebook:  { scheduled: boolean; error?: string }
@@ -52,10 +66,12 @@ export async function POST(req: NextRequest) {
 
   const n8nWebhookUrl = process.env.N8N_WEBHOOK_PUBLICAR_META
 
+  const pageToken = getMetaToken(client.facebook_page_token)
+
   const canSchedule =
     status === 'approved_by_client' &&
     client.facebook_page_id &&
-    client.facebook_page_token &&
+    pageToken &&
     content.scheduled_date
 
   if (canSchedule && n8nWebhookUrl) {
@@ -68,7 +84,7 @@ export async function POST(req: NextRequest) {
       scheduled_date: content.scheduled_date!,
       scheduled_time: (content as Record<string, unknown>).scheduled_time as string ?? '09:00',
       page_id:        client.facebook_page_id!,
-      page_token:     client.facebook_page_token!,
+      page_token:     pageToken,
       ig_account_id:  client.instagram_account_id ?? null,
     }
 
