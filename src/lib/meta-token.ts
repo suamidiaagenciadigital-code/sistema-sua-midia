@@ -1,8 +1,8 @@
 /**
- * Retorna o token do Usuário do Sistema da Meta.
- * Prioridade: variável de ambiente FACEBOOK_SYSTEM_TOKEN (global)
- * Fallback: token salvo por cliente no banco (legado)
+ * Retorna o token da Meta para publicação.
+ * Prioridade: token salvo por cliente no banco
+ * Fallback: variável de ambiente FACEBOOK_SYSTEM_TOKEN (global)
  */
 export function getMetaToken(clientToken?: string | null): string {
-  return process.env.FACEBOOK_SYSTEM_TOKEN ?? clientToken ?? ''
+  return clientToken ?? process.env.FACEBOOK_SYSTEM_TOKEN ?? ''
 }
