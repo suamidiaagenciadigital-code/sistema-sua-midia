@@ -21,13 +21,18 @@ export async function GET(req: NextRequest) {
   const todayDate = brasiliaTime.toISOString().split('T')[0]        // YYYY-MM-DD
   const currentTime = brasiliaTime.toISOString().split('T')[1].slice(0, 5) // HH:MM
 
-  // Buscar todos aprovados com data agendada <= hoje (filtra o horário no JS)
+  // Janela de 7 dias: evita publicar backlog acumulado de semanas anteriores
+  const sevenDaysAgo = new Date(brasiliaTime.getTime() - 7 * 24 * 60 * 60 * 1000)
+  const sevenDaysAgoDate = sevenDaysAgo.toISOString().split('T')[0]
+
+  // Buscar aprovados dentro dos últimos 7 dias (filtra horário no JS)
   const { data: candidates, error: dbError } = await supabase
     .from('contents')
     .select('id, scheduled_date, scheduled_time, client_id')
     .eq('status', 'approved_by_client')
     .not('scheduled_date', 'is', null)
     .lte('scheduled_date', todayDate)
+    .gte('scheduled_date', sevenDaysAgoDate)
 
   if (dbError) {
     console.error('[cron] Erro ao buscar conteúdos:', dbError.message)
