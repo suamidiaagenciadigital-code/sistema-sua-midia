@@ -9,6 +9,7 @@ import {
   CheckSquare,
   MessageSquare,
   Megaphone,
+  FileText,
   Settings,
 } from 'lucide-react'
 
@@ -18,6 +19,7 @@ const navItems = [
   { href: '/approvals', label: 'Aprovações', icon: CheckSquare },
   { href: '/support', label: 'Atendimento', icon: MessageSquare },
   { href: '/ads', label: 'Anúncios', icon: Megaphone },
+  { href: '/propostas', label: 'Propostas', icon: FileText },
   { href: '/settings', label: 'Configurações', icon: Settings },
 ]
 

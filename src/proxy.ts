@@ -29,22 +29,48 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Rotas públicas: aprovação do cliente e webhooks do n8n/Z-API
+  // ── Rotas 100% públicas ────────────────────────────────────────────────
   if (
     pathname.startsWith('/approve/') ||
+    pathname.startsWith('/propostas/') ||
     pathname.startsWith('/api/webhooks/') ||
-    pathname.startsWith('/api/public-approval')
+    pathname.startsWith('/api/public-approval') ||
+    pathname.startsWith('/api/cron/')
   ) {
     return supabaseResponse
   }
 
+  const isPortalRoute  = pathname.startsWith('/portal')
+  const isPortalLogin  = pathname === '/portal/login'
+  const isAgencyLogin  = pathname === '/login'
+
+  const role = (user?.user_metadata?.role as string | undefined) ?? 'agency'
+  const isClientUser   = role === 'client'
+
+  // ── Portal do cliente ──────────────────────────────────────────────────
+  if (isPortalRoute) {
+    // Página de login do portal: sempre pública
+    if (isPortalLogin) return supabaseResponse
+    // Não autenticado → login do portal
+    if (!user) return NextResponse.redirect(new URL('/portal/login', request.url))
+    // Usuário da agência tentando entrar no portal → redireciona para painel
+    if (!isClientUser) return NextResponse.redirect(new URL('/dashboard', request.url))
+    return supabaseResponse
+  }
+
+  // ── Painel da agência ──────────────────────────────────────────────────
+  // Cliente tentando acessar área da agência → redireciona para o portal
+  if (user && isClientUser && !isAgencyLogin) {
+    return NextResponse.redirect(new URL('/portal', request.url))
+  }
+
   // Não autenticado tentando acessar área protegida
-  if (!user && pathname !== '/login') {
+  if (!user && !isAgencyLogin) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Autenticado tentando acessar login
-  if (user && pathname === '/login') {
+  // Autenticado (agência) tentando acessar login
+  if (user && isAgencyLogin) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
