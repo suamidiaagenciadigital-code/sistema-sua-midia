@@ -35,7 +35,7 @@ export default async function IntegrationsPage({ params }: Props) {
       </div>
 
       {/* Status cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className={`rounded-lg border p-4 flex items-center gap-3 ${
           hasFacebook
             ? 'border-blue-800/60 bg-blue-950/20'

@@ -63,7 +63,7 @@ export default function NewClientPage() {
 
       <form action={createClientAction} className="space-y-8">
         <Section title="Identidade do negócio">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Nome do cliente" name="name" required placeholder="Ex: Don Barbearia" />
             <Field label="Nicho / Segmento" name="niche" required placeholder="Ex: Barbearia masculina premium" />
           </div>
@@ -105,7 +105,7 @@ export default function NewClientPage() {
             placeholder="Ex: Aumentar agendamentos online em 30%, divulgar pacotes..." />
           <Field label="Serviços contratados" name="contracted_services" required type="textarea" rows={3}
             placeholder="Ex: 6 publicações/semana (2 reels + 1 carrossel + 3 imagens), video maker 1x/mês..." />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Orçamento de anúncios" name="ad_budget" placeholder="Ex: R$500/mês Google Ads" />
             <Field label="Limite de alterações" name="revision_limit" placeholder="Ex: 2 rodadas de revisão" />
           </div>
@@ -125,7 +125,7 @@ export default function NewClientPage() {
         <Section title="Identidade visual">
           <Field label="Referências visuais" name="visual_references" type="textarea" rows={2}
             placeholder="Ex: Tons escuros, preto e dourado, estética cinematográfica..." />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Cores da marca (hex)" name="brand_colors"
               hint="Separe por vírgula: Ex: #1A1A1A, #D4AF37"
               placeholder="#1A1A1A, #D4AF37" />

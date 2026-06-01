@@ -33,20 +33,19 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
   useEffect(() => {
     setItems(contents)
   }, [contents])
+
   const [dragOverDay, setDragOverDay] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
 
   const today = new Date()
 
   // Montar mapa dia → conteúdos
-  // Parseamos YYYY-MM-DD diretamente para evitar problemas de fuso horário
-  // e garantir que só conteúdos do mês/ano correto apareçam nas células
   const byDay: Record<number, ContentItem[]> = {}
   for (const c of items) {
     if (!c.scheduled_date) continue
     const parts = c.scheduled_date.split('-').map(Number)
     const [cy, cm, cd] = parts as [number, number, number]
-    if (cy !== year || cm !== month) continue   // ignora datas de outros meses
+    if (cy !== year || cm !== month) continue
     if (!byDay[cd]) byDay[cd] = []
     byDay[cd]!.push(c)
   }
@@ -106,17 +105,31 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
   }, [])
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900 overflow-hidden">
+    <div
+      className="rounded-xl overflow-hidden overflow-x-auto"
+      style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+    <div className="min-w-[560px]">
       {saving && (
-        <div className="px-4 py-1.5 bg-blue-950/50 border-b border-blue-900/40 text-xs text-blue-300 text-center">
+        <div
+          className="px-4 py-1.5 text-xs text-blue-300 text-center"
+          style={{ backgroundColor: 'rgba(43,128,255,0.12)', borderBottom: '1px solid rgba(43,128,255,0.2)' }}
+        >
           Salvando nova data…
         </div>
       )}
 
       {/* Cabeçalho dos dias da semana */}
-      <div className="grid grid-cols-7 border-b border-zinc-800">
+      <div
+        className="grid grid-cols-7"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', backgroundColor: 'rgba(255,255,255,0.02)' }}
+      >
         {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
-          <div key={d} className="px-2 py-2 text-center text-xs font-medium text-zinc-500 uppercase tracking-wide">
+          <div
+            key={d}
+            className="px-2 py-3 text-center text-xs font-semibold uppercase tracking-widest"
+            style={{ color: '#475569' }}
+          >
             {d}
           </div>
         ))}
@@ -126,7 +139,15 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
       <div className="grid grid-cols-7">
         {/* Células vazias antes do primeiro dia */}
         {Array.from({ length: firstWeekday }).map((_, i) => (
-          <div key={`empty-${i}`} className="min-h-24 border-b border-r border-zinc-800 bg-zinc-950/30 p-1" />
+          <div
+            key={`empty-${i}`}
+            className="min-h-24 p-1"
+            style={{
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              borderRight: '1px solid rgba(255,255,255,0.05)',
+              backgroundColor: 'rgba(0,0,0,0.15)',
+            }}
+          />
         ))}
 
         {/* Dias do mês */}
@@ -147,21 +168,36 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
               onDragOver={(e) => handleDragOver(e, day)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, day)}
-              className={`min-h-24 border-b border-r border-zinc-800 p-1.5 transition-colors
-                ${isLastCol ? 'border-r-0' : ''}
-                ${isToday ? 'bg-zinc-800/50' : ''}
-                ${isDragOver ? 'bg-blue-950/40 border-blue-800/60' : ''}
-              `}
+              className="min-h-24 p-1.5 transition-colors"
+              style={{
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                borderRight: isLastCol ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                backgroundColor: isDragOver
+                  ? 'rgba(43,128,255,0.12)'
+                  : isToday
+                  ? 'rgba(43,128,255,0.07)'
+                  : undefined,
+                outline: isDragOver ? '1px solid rgba(43,128,255,0.4)' : undefined,
+                outlineOffset: '-1px',
+              }}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full ${
-                  isToday ? 'bg-white text-zinc-900' : 'text-zinc-400'
-                }`}>
-                  {day}
-                </span>
+                {isToday ? (
+                  <span
+                    className="text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full text-white"
+                    style={{ background: 'linear-gradient(135deg, #2B80FF, #A855F7)' }}
+                  >
+                    {day}
+                  </span>
+                ) : (
+                  <span className="text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full" style={{ color: '#475569' }}>
+                    {day}
+                  </span>
+                )}
                 <Link
                   href={`/clients/${clientId}/content/new`}
-                  className="text-zinc-700 hover:text-zinc-400 transition-colors"
+                  className="transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.15)' }}
                 >
                   <Plus className="h-3 w-3" />
                 </Link>
@@ -175,14 +211,18 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
                     onDragStart={(e) => handleDragStart(e, c.id)}
                     onDragEnd={handleDragEnd}
                     className={`flex items-center gap-1 rounded px-1 py-0.5 transition-all cursor-grab active:cursor-grabbing
-                      ${draggingId === c.id ? 'opacity-40 scale-95' : 'hover:bg-zinc-700/50'}
+                      ${draggingId === c.id ? 'opacity-40 scale-95' : ''}
                     `}
+                    style={draggingId !== c.id ? { backgroundColor: 'rgba(255,255,255,0.04)' } : undefined}
                   >
-                    <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_DOT[c.status as ContentStatus] ?? 'bg-zinc-500'}`} />
+                    <div
+                      className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_DOT[c.status as ContentStatus] ?? 'bg-zinc-500'}`}
+                    />
                     <Link
                       href={`/clients/${clientId}/content/${c.id}`}
                       onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-zinc-300 truncate leading-tight flex-1 min-w-0"
+                      className="text-xs truncate leading-tight flex-1 min-w-0"
+                      style={{ color: '#94a3b8' }}
                       title={c.title}
                     >
                       {TYPE_ICON[c.type]} {c.title}
@@ -196,9 +236,18 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
 
         {/* Células vazias depois do último dia */}
         {Array.from({ length: (7 - ((firstWeekday + daysInMonth) % 7)) % 7 }).map((_, i) => (
-          <div key={`end-${i}`} className="min-h-24 border-b border-r border-zinc-800 bg-zinc-950/30 p-1 last:border-r-0" />
+          <div
+            key={`end-${i}`}
+            className="min-h-24 p-1"
+            style={{
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              borderRight: i === (7 - ((firstWeekday + daysInMonth) % 7)) % 7 - 1 ? 'none' : '1px solid rgba(255,255,255,0.05)',
+              backgroundColor: 'rgba(0,0,0,0.15)',
+            }}
+          />
         ))}
       </div>
+    </div>
     </div>
   )
 }

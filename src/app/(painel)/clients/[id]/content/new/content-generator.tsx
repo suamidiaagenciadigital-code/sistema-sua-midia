@@ -5,9 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ChevronLeft, Sparkles, Save, RefreshCw, Plus, Trash2,
-  PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays, Send, Loader2, Upload,
+  PenLine, ChevronDown, ChevronUp, FileUp, AlertCircle, CalendarDays, Loader2, Upload,
+  Play, LayoutGrid, Image as ImageIcon, Zap,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+
+// ── Lumina input class ────────────────────────────────────────
+const base = "w-full rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none transition-colors bg-white/5 border border-white/10"
 
 // ── Upload direto do browser para Supabase via URL assinada ──────────────
 function VideoUploadField({
@@ -22,8 +26,6 @@ function VideoUploadField({
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-
-  const inputClass = "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500"
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -68,7 +70,7 @@ function VideoUploadField({
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder="Cole o link do Supabase ou use o botão abaixo"
-          className={inputClass + ' flex-1'}
+          className={base + ' flex-1'}
         />
       </div>
       <div className="flex items-center gap-3">
@@ -76,17 +78,18 @@ function VideoUploadField({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}
         >
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
           {uploading ? 'Enviando vídeo...' : 'Subir vídeo do computador'}
         </button>
-        <span className="text-xs text-zinc-500">MP4, MOV, WebM</span>
+        <span className="text-xs text-slate-600">MP4, MOV, WebM</span>
       </div>
       <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFile} />
       {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
       {value && value.includes('supabase') && (
-        <p className="text-xs text-green-400">✓ Vídeo hospedado no Supabase — pronto para Instagram</p>
+        <p className="text-xs text-emerald-400">✓ Vídeo hospedado no Supabase — pronto para Instagram</p>
       )}
     </div>
   )
@@ -117,17 +120,35 @@ interface CarouselCard {
 }
 
 const contentTypes = [
-  { value: 'reel',      label: 'Reel',      desc: 'Vídeo vertical ~30-60s' },
-  { value: 'carrossel', label: 'Carrossel', desc: '5-8 slides educativos' },
-  { value: 'imagem',    label: 'Imagem',    desc: 'Post de feed' },
-  { value: 'story',     label: 'Story',     desc: 'Conteúdo efêmero' },
+  {
+    value: 'reel', label: 'Reel', desc: 'Vídeo vertical ~30-60s',
+    iconBg: 'linear-gradient(135deg, rgba(29,78,216,0.6), rgba(43,128,255,0.6))',
+    iconBorder: 'rgba(43,128,255,0.4)',
+    Icon: Play,
+  },
+  {
+    value: 'carrossel', label: 'Carrossel', desc: '3-5 slides educativos',
+    iconBg: 'linear-gradient(135deg, rgba(124,58,237,0.6), rgba(219,39,119,0.6))',
+    iconBorder: 'rgba(168,85,247,0.4)',
+    Icon: LayoutGrid,
+  },
+  {
+    value: 'imagem', label: 'Imagem', desc: 'Post de feed',
+    iconBg: 'linear-gradient(135deg, rgba(13,148,136,0.6), rgba(5,150,105,0.6))',
+    iconBorder: 'rgba(52,211,153,0.4)',
+    Icon: ImageIcon,
+  },
+  {
+    value: 'story', label: 'Story', desc: 'Conteúdo efêmero',
+    iconBg: 'linear-gradient(135deg, rgba(217,119,6,0.6), rgba(234,88,12,0.6))',
+    iconBorder: 'rgba(251,146,60,0.4)',
+    Icon: Zap,
+  },
 ]
 
 const TYPE_EMOJI: Record<string, string> = {
   reel: '🎬', carrossel: '🗂️', imagem: '📷', story: '📲',
 }
-
-const base = "w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500"
 
 // Resolve Google Drive URL para exibição direta
 function resolveImageUrl(url: string): string {
@@ -174,18 +195,33 @@ function PreviewPanel({
 
   return (
     <div className="sticky top-6 space-y-3">
-      <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Preview</p>
+      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#475569' }}>Preview</p>
 
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 overflow-hidden">
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
         {!hasContent ? (
-          <div className="flex flex-col items-center justify-center gap-2" style={{ aspectRatio: isStory ? '9/16' : undefined, minHeight: isStory ? undefined : '160px', padding: '40px 24px' }}>
-            <span className="text-3xl opacity-30">{TYPE_EMOJI[type] ?? '📄'}</span>
-            <p className="text-zinc-600 text-xs text-center">Preencha os campos ao lado para ver o preview</p>
+          <div
+            className="flex flex-col items-center justify-center gap-3 py-14 px-6"
+          >
+            {/* Icon placeholder */}
+            <div
+              className="w-24 h-24 rounded-2xl flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(135deg, rgba(43,128,255,0.15), rgba(168,85,247,0.15))',
+                border: '1px solid rgba(43,128,255,0.2)',
+              }}
+            >
+              <span className="text-5xl opacity-70">{TYPE_EMOJI[type] ?? '📄'}</span>
+            </div>
+            <p className="text-slate-400 text-sm text-center leading-relaxed">
+              Preencha os campos<br />ao lado para ver o preview
+            </p>
           </div>
         ) : isStory ? (
-          /* ── Story: 9/16, só imagem, sem header/caption ── */
           creativeUrl.trim() ? (
-            <div className="w-full bg-zinc-900" style={{ aspectRatio: '9/16' }}>
+            <div className="w-full bg-black" style={{ aspectRatio: '9/16' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={resolveImageUrl(creativeUrl)}
@@ -195,28 +231,29 @@ function PreviewPanel({
               />
             </div>
           ) : (
-            <div className="w-full bg-zinc-800 flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '9/16' }}>
+            <div className="w-full flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '9/16', backgroundColor: 'rgba(255,255,255,0.03)' }}>
               <span className="text-4xl opacity-20">📲</span>
-              <p className="text-zinc-600 text-xs">1080 × 1920</p>
+              <p className="text-slate-600 text-xs">1080 × 1920</p>
             </div>
           )
         ) : (
           <>
             {/* Post header */}
-            <div className="flex items-center gap-2.5 px-3 py-3 border-b border-zinc-800">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+            <div className="flex items-center gap-2.5 px-3 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                style={{ background: 'linear-gradient(135deg, #ec4899, #f97316, #eab308)' }}>
                 {initials}
               </div>
               <div className="min-w-0">
                 <p className="text-white text-xs font-semibold leading-tight truncate">{clientName}</p>
-                <p className="text-zinc-500 text-[11px]">{TYPE_EMOJI[type]} {type}</p>
+                <p className="text-slate-500 text-[11px]">{TYPE_EMOJI[type]} {type}</p>
               </div>
             </div>
 
             {/* Mídia */}
             {isCarousel && mediaUrls.length > 0 ? (
               <div>
-                <div className="w-full bg-zinc-800" style={{ aspectRatio: '4/5' }}>
+                <div className="w-full bg-black" style={{ aspectRatio: '4/5' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={resolveImageUrl(mediaUrls[activeSlide] ?? '')}
@@ -230,7 +267,7 @@ function PreviewPanel({
                       <button
                         key={i}
                         onClick={() => setActiveSlide(i)}
-                        className={`rounded-full transition-all ${i === activeSlide ? 'w-2 h-2 bg-white' : 'w-1.5 h-1.5 bg-zinc-600 hover:bg-zinc-400'}`}
+                        className={`rounded-full transition-all ${i === activeSlide ? 'w-2 h-2 bg-white' : 'w-1.5 h-1.5 bg-slate-600 hover:bg-slate-400'}`}
                       />
                     ))}
                   </div>
@@ -255,7 +292,7 @@ function PreviewPanel({
                 )}
               </div>
             ) : creativeUrl.trim() ? (
-              <div className="w-full bg-zinc-800" style={{ aspectRatio: '4/5' }}>
+              <div className="w-full bg-black" style={{ aspectRatio: '4/5' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={resolveImageUrl(creativeUrl)}
@@ -265,9 +302,9 @@ function PreviewPanel({
                 />
               </div>
             ) : (
-              <div className="w-full bg-zinc-800 flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '4/5' }}>
+              <div className="w-full flex flex-col items-center justify-center gap-2" style={{ aspectRatio: '4/5', backgroundColor: 'rgba(255,255,255,0.03)' }}>
                 <span className="text-4xl opacity-20">{TYPE_EMOJI[type] ?? '📄'}</span>
-                <p className="text-zinc-600 text-xs">Nenhuma mídia anexada</p>
+                <p className="text-slate-600 text-xs">Nenhuma mídia anexada</p>
               </div>
             )}
 
@@ -277,10 +314,10 @@ function PreviewPanel({
                 {caption ? (
                   <p className="text-xs text-white leading-relaxed">
                     <span className="font-semibold">{clientName} </span>
-                    <span className="text-zinc-300 whitespace-pre-wrap">{caption}</span>
+                    <span className="text-slate-300 whitespace-pre-wrap">{caption}</span>
                   </p>
                 ) : title ? (
-                  <p className="text-xs text-zinc-400 italic">{title}</p>
+                  <p className="text-xs text-slate-400 italic">{title}</p>
                 ) : null}
               </div>
             )}
@@ -288,7 +325,9 @@ function PreviewPanel({
         )}
       </div>
 
-      <p className="text-[11px] text-zinc-600 text-center">Preview atualiza em tempo real</p>
+      <p className="text-[11px] text-slate-600 text-center">
+        Preview atualiza em <span style={{ color: '#2B80FF' }}>tempo real</span>
+      </p>
     </div>
   )
 }
@@ -305,36 +344,38 @@ function ScenesEditor({ scenes, setScenes }: { scenes: ReelScene[]; setScenes: (
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+        <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
           Cenas do Reel
-          <span className="ml-2 normal-case text-zinc-600 font-normal">
+          <span className="ml-2 normal-case text-slate-600 font-normal">
             ({scenes.length} cena{scenes.length !== 1 ? 's' : ''} · ~{scenes.length * 8}s)
           </span>
         </label>
         <button type="button" onClick={add}
-          className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded px-2 py-1 transition-colors">
+          className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full transition-opacity hover:opacity-90"
+          style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
           <Plus className="h-3 w-3" /> Cena
         </button>
       </div>
       {scenes.length === 0 && (
-        <p className="text-xs text-zinc-600 italic">Nenhuma cena. Clique em "+ Cena" para começar.</p>
+        <p className="text-xs text-slate-600 italic">Nenhuma cena. Clique em "+ Cena" para começar.</p>
       )}
       {scenes.map((s, i) => (
-        <div key={i} className="rounded-md border border-zinc-700 bg-zinc-800/50 p-3 space-y-2">
+        <div key={i} className="rounded-xl p-3 space-y-2"
+          style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-300">Cena {s.scene}</span>
-            <button type="button" onClick={() => remove(i)} className="text-zinc-600 hover:text-red-400 transition-colors">
+            <span className="text-xs font-semibold text-slate-300">Cena {s.scene}</span>
+            <button type="button" onClick={() => remove(i)} className="text-slate-600 hover:text-red-400 transition-colors">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-zinc-500">Prompt visual</label>
+            <label className="text-xs text-slate-500">Prompt visual</label>
             <textarea rows={2} value={s.visual_prompt} onChange={e => update(i, 'visual_prompt', e.target.value)}
               placeholder="Descreva o visual da cena para geração de imagem/vídeo"
               className={base + ' resize-none'} />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-zinc-500">Narração</label>
+            <label className="text-xs text-slate-500">Narração</label>
             <textarea rows={2} value={s.narration} onChange={e => update(i, 'narration', e.target.value)}
               placeholder="Texto falado nesta cena"
               className={base + ' resize-none'} />
@@ -343,7 +384,8 @@ function ScenesEditor({ scenes, setScenes }: { scenes: ReelScene[]; setScenes: (
       ))}
       {scenes.length > 0 && (
         <button type="button" onClick={add}
-          className="w-full rounded-md border border-dashed border-zinc-700 py-2 text-xs text-zinc-600 hover:text-zinc-300 hover:border-zinc-500 transition-colors">
+          className="w-full rounded-xl py-2 text-xs transition-colors"
+          style={{ border: '1px dashed rgba(255,255,255,0.1)', color: '#475569' }}>
           + Adicionar cena
         </button>
       )}
@@ -361,27 +403,29 @@ function CardsEditor({ cards, setCards }: { cards: CarouselCard[]; setCards: (c:
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+        <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
           Cards do Carrossel
-          <span className="ml-2 normal-case text-zinc-600 font-normal">
+          <span className="ml-2 normal-case text-slate-600 font-normal">
             ({cards.length} slide{cards.length !== 1 ? 's' : ''})
           </span>
         </label>
         <button type="button" onClick={add}
-          className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded px-2 py-1 transition-colors">
+          className="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full transition-opacity hover:opacity-90"
+          style={{ backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8' }}>
           <Plus className="h-3 w-3" /> Card
         </button>
       </div>
       {cards.length === 0 && (
-        <p className="text-xs text-zinc-600 italic">Nenhum card. Clique em "+ Card" para começar.</p>
+        <p className="text-xs text-slate-600 italic">Nenhum card. Clique em "+ Card" para começar.</p>
       )}
       {cards.map((c, i) => (
-        <div key={i} className="rounded-md border border-zinc-700 bg-zinc-800/50 p-3 space-y-2">
+        <div key={i} className="rounded-xl p-3 space-y-2"
+          style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-300">
+            <span className="text-xs font-semibold text-slate-300">
               {i === 0 ? '🎯 Capa (Card 1)' : `Card ${c.card}`}
             </span>
-            <button type="button" onClick={() => remove(i)} className="text-zinc-600 hover:text-red-400 transition-colors">
+            <button type="button" onClick={() => remove(i)} className="text-slate-600 hover:text-red-400 transition-colors">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -398,7 +442,8 @@ function CardsEditor({ cards, setCards }: { cards: CarouselCard[]; setCards: (c:
       ))}
       {cards.length > 0 && (
         <button type="button" onClick={add}
-          className="w-full rounded-md border border-dashed border-zinc-700 py-2 text-xs text-zinc-600 hover:text-zinc-300 hover:border-zinc-500 transition-colors">
+          className="w-full rounded-xl py-2 text-xs transition-colors"
+          style={{ border: '1px dashed rgba(255,255,255,0.1)', color: '#475569' }}>
           + Adicionar card
         </button>
       )}
@@ -557,16 +602,16 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     setEdited(prev => prev ? { ...prev, [key]: val } : prev)
 
   const inputField = (label: string, key: keyof Generated, placeholder = '') => (
-    <div className="space-y-1">
-      <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">{label}</label>
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">{label}</label>
       <input type="text" value={(edited?.[key] as string) ?? ''} onChange={e => setField(key, e.target.value)}
         placeholder={placeholder} className={base} />
     </div>
   )
 
   const textareaField = (label: string, key: keyof Generated, rows = 3, placeholder = '') => (
-    <div className="space-y-1">
-      <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">{label}</label>
+    <div className="space-y-1.5">
+      <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">{label}</label>
       <textarea rows={rows} value={(edited?.[key] as string) ?? ''} onChange={e => setField(key, e.target.value)}
         placeholder={placeholder} className={base + ' resize-none'} />
     </div>
@@ -577,17 +622,21 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href={`/clients/${clientId}/calendar`} className="text-zinc-400 hover:text-white transition-colors">
-            <ChevronLeft className="h-5 w-5" />
+          <Link
+            href={`/clients/${clientId}/calendar`}
+            className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <ChevronLeft className="h-4 w-4 text-slate-400" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-white">Novo conteúdo</h1>
-            <p className="text-zinc-400 text-sm mt-0.5">{clientName}</p>
+            <h1 className="text-3xl font-extrabold text-white">Novo conteúdo</h1>
+            <p className="text-slate-500 text-sm mt-0.5">{clientName}</p>
           </div>
         </div>
         <Link
           href={`/clients/${clientId}/calendar`}
-          className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-white transition-colors"
         >
           <CalendarDays className="h-4 w-4" />
           Ver calendário
@@ -595,64 +644,119 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
       </div>
 
       {/* Layout: form + preview */}
-      <div className="grid grid-cols-1 xl:grid-cols-[65%_35%] gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[5fr_3fr] gap-10 items-start max-w-7xl">
 
         {/* ── Coluna esquerda: formulário ── */}
-        <div className="space-y-6">
+        <div className="space-y-5">
 
           {/* Modo: IA ou Manual */}
-          <div className="flex gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-1">
-            <button type="button" onClick={() => switchMode('ai')}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
-                mode === 'ai' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
-              }`}>
+          <div
+            className="flex gap-1 rounded-xl p-1"
+            style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <button
+              type="button"
+              onClick={() => switchMode('ai')}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition-all"
+              style={mode === 'ai'
+                ? { background: 'linear-gradient(to right, #2B80FF, #A855F7)', color: '#fff' }
+                : { color: '#64748b' }
+              }
+            >
               <Sparkles className="h-4 w-4" /> Gerar com IA
             </button>
-            <button type="button" onClick={() => switchMode('manual')}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-medium transition-colors ${
-                mode === 'manual' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
-              }`}>
+            <button
+              type="button"
+              onClick={() => switchMode('manual')}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-bold transition-all"
+              style={mode === 'manual'
+                ? { background: 'linear-gradient(to right, #2B80FF, #A855F7)', color: '#fff' }
+                : { color: '#64748b' }
+              }
+            >
               <PenLine className="h-4 w-4" /> Criar manualmente
             </button>
           </div>
 
-          {/* Tipo de conteúdo + controles de geração */}
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Tipo de conteúdo</label>
-              <div className="grid grid-cols-4 gap-2">
-                {contentTypes.map(ct => (
-                  <button key={ct.value} type="button" onClick={() => {
-                    setType(ct.value)
-                    setScenes([])
-                    setCards([])
-                    setCreativeUrl('')
-                    setMediaUrlsText('')
-                  }}
-                    className={`rounded-md border p-3 text-left transition-colors ${
-                      type === ct.value ? 'border-white bg-zinc-700 text-white' : 'border-zinc-700 text-zinc-400 hover:border-zinc-600 hover:text-white'
-                    }`}>
-                    <div className="text-sm font-medium">{ct.label}</div>
-                    <div className="text-xs mt-0.5 opacity-70">{ct.desc}</div>
-                  </button>
-                ))}
+          {/* Tipo de conteúdo */}
+          <div
+            className="rounded-xl p-5 space-y-5"
+            style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            <div className="space-y-3">
+              <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Tipo de conteúdo</label>
+              <div className="grid grid-cols-4 gap-3">
+                {contentTypes.map(({ value, label, desc, iconBg, iconBorder, Icon }) => {
+                  const isSelected = type === value
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setType(value)
+                        setScenes([])
+                        setCards([])
+                        setCreativeUrl('')
+                        setMediaUrlsText('')
+                      }}
+                      className="relative rounded-xl p-4 text-left transition-all"
+                      style={{
+                        backgroundColor: isSelected ? 'rgba(43,128,255,0.06)' : 'rgba(255,255,255,0.03)',
+                        border: isSelected ? '1.5px solid #2B80FF' : '1px solid rgba(255,255,255,0.08)',
+                        boxShadow: isSelected ? '0 0 20px rgba(43,128,255,0.12)' : undefined,
+                      }}
+                    >
+                      {/* Checkmark */}
+                      {isSelected && (
+                        <div
+                          className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center"
+                          style={{ background: 'linear-gradient(135deg, #2B80FF, #A855F7)' }}
+                        >
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                            <path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      )}
+                      {/* Icon badge */}
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                        style={{ background: iconBg, border: `1px solid ${iconBorder}` }}
+                      >
+                        <Icon className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="text-sm font-semibold text-white">{label}</div>
+                      <div className="text-xs text-slate-500 mt-0.5 leading-snug">{desc}</div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             {/* Controles modo IA */}
             {mode === 'ai' && (
               <>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
-                    Tema / gancho <span className="normal-case text-zinc-600">(opcional)</span>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+                    Tema / gancho <span className="normal-case text-slate-600 font-normal">(opcional)</span>
                   </label>
-                  <input type="text" value={theme} onChange={e => setTheme(e.target.value)}
+                  <input
+                    type="text"
+                    value={theme}
+                    onChange={e => setTheme(e.target.value)}
                     placeholder="Ex: Dia do noivo, barba perfeita, experiência premium..."
-                    className={base} />
+                    className={base}
+                  />
                 </div>
-                <button onClick={generate} disabled={loading}
-                  className="flex items-center gap-2 rounded-md bg-white px-5 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                  {loading ? <><RefreshCw className="h-4 w-4 animate-spin" /> Gerando...</> : <><Sparkles className="h-4 w-4" /> Gerar com IA</>}
+                <button
+                  onClick={generate}
+                  disabled={loading}
+                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}
+                >
+                  {loading
+                    ? <><RefreshCw className="h-4 w-4 animate-spin" /> Gerando...</>
+                    : <><Sparkles className="h-4 w-4" /> Gerar com IA</>
+                  }
                 </button>
               </>
             )}
@@ -660,10 +764,14 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
             {/* Controles modo manual */}
             {mode === 'manual' && (
               <div className="space-y-2">
-                <p className="text-xs text-zinc-500">Preencha os campos abaixo ou importe um JSON gerado no chat do Claude.</p>
+                <p className="text-xs text-slate-500">Preencha os campos abaixo ou importe um JSON gerado no chat do Claude.</p>
                 <input ref={importRef} type="file" accept=".json" onChange={importFromFile} className="hidden" />
-                <button type="button" onClick={() => importRef.current?.click()}
-                  className="flex items-center gap-2 rounded-md border border-zinc-700 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => importRef.current?.click()}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm text-slate-300 hover:text-white transition-colors"
+                  style={{ border: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'rgba(255,255,255,0.04)' }}
+                >
                   <FileUp className="h-4 w-4" /> Importar conteúdo (.json)
                 </button>
                 {importError && (
@@ -679,14 +787,23 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
 
           {/* Formulário de edição */}
           {edited !== null && (
-            <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-5">
+            <div
+              className="rounded-xl p-5 space-y-5"
+              style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {/* Accent bar top */}
+              <div className="-mx-5 -mt-5 h-0.5 mb-5 rounded-t-xl" style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }} />
+
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-white">
                   {mode === 'ai' ? 'Conteúdo gerado — edite antes de salvar' : 'Preencha o conteúdo'}
                 </h2>
                 {mode === 'ai' && (
-                  <button onClick={generate} disabled={loading}
-                    className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors">
+                  <button
+                    onClick={generate}
+                    disabled={loading}
+                    className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+                  >
                     <RefreshCw className="h-3.5 w-3.5" /> Regenerar
                   </button>
                 )}
@@ -696,10 +813,12 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                 type === 'story' ? 'Ex: Story — promoção de quinta' : 'Ex: Barba do mês — o look mais pedido'
               )}
 
-              {/* Story: múltiplas mídias (uma por linha) */}
+              {/* Story: múltiplas mídias */}
               {type === 'story' ? (
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Links das mídias (1080×1920) — uma por linha</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
+                    Links das mídias (1080×1920) — uma por linha
+                  </label>
                   <textarea
                     rows={3}
                     value={mediaUrlsText}
@@ -707,7 +826,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                     placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
                     className={base + ' resize-none'}
                   />
-                  <p className="text-xs text-zinc-500">Cole um link por linha. Cada linha vira um frame do story. O preview mostra o primeiro.</p>
+                  <p className="text-xs text-slate-600">Cole um link por linha. O preview mostra o primeiro.</p>
                 </div>
               ) : (
                 <>
@@ -726,8 +845,8 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
 
                   {/* URL do criativo */}
                   {type === 'carrossel' ? (
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
                         URLs dos slides (uma por linha)
                       </label>
                       <textarea
@@ -737,19 +856,15 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                         placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
                         className={base + ' resize-none'}
                       />
-                      <p className="text-xs text-zinc-500">Cole um link do Google Drive por linha. O preview ao lado atualiza automaticamente.</p>
+                      <p className="text-xs text-slate-600">Cole um link do Google Drive por linha. O preview atualiza automaticamente.</p>
                     </div>
                   ) : (
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
                         {type === 'reel' ? 'Vídeo' : 'URL do criativo (imagem)'}
                       </label>
                       {type === 'reel' ? (
-                        <VideoUploadField
-                          clientId={clientId}
-                          value={creativeUrl}
-                          onChange={setCreativeUrl}
-                        />
+                        <VideoUploadField clientId={clientId} value={creativeUrl} onChange={setCreativeUrl} />
                       ) : (
                         <>
                           <input
@@ -759,8 +874,8 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                             placeholder="https://drive.google.com/file/d/.../view"
                             className={base}
                           />
-                          <p className="text-xs text-zinc-500">
-                            Link da imagem no Google Drive ou URL pública. O preview ao lado atualiza na hora.
+                          <p className="text-xs text-slate-600">
+                            Link da imagem no Google Drive ou URL pública. O preview atualiza na hora.
                           </p>
                         </>
                       )}
@@ -769,15 +884,18 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
 
                   {/* Prompts toggle */}
                   <div>
-                    <button type="button" onClick={() => setShowPrompts(v => !v)}
-                      className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setShowPrompts(v => !v)}
+                      className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                    >
                       {showPrompts ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                       {showPrompts ? 'Ocultar campos de prompt' : 'Mostrar campos de prompt (IA)'}
                     </button>
                   </div>
 
                   {showPrompts && (
-                    <div className="border-t border-zinc-800 pt-4">
+                    <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                       {textareaField('Prompt de imagem', 'image_prompt', 3, 'Descreva o visual para Midjourney/DALL-E')}
                     </div>
                   )}
@@ -787,39 +905,64 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                 </>
               )}
 
-              {/* Data + Hora de publicação */}
-              <div className="rounded-md border border-zinc-700 bg-zinc-800/40 p-3 space-y-2">
-                <label className="text-xs font-medium text-zinc-300 uppercase tracking-wide flex items-center gap-1.5">
+              {/* Agendamento */}
+              <div
+                className="rounded-xl p-4 space-y-3"
+                style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <label className="text-xs font-semibold text-slate-300 uppercase tracking-widest flex items-center gap-1.5">
                   <CalendarDays className="h-3.5 w-3.5" />
                   Agendamento
-                  <span className="normal-case font-normal text-zinc-500 ml-1">(deixe em branco para salvar sem data)</span>
+                  <span className="normal-case font-normal text-slate-600 ml-1">(deixe em branco para salvar sem data)</span>
                 </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-zinc-500">Data</label>
-                    <input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
-                      className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-slate-500">Data</label>
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={e => setScheduledDate(e.target.value)}
+                      className={base}
+                    />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-zinc-500">Hora</label>
-                    <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
-                      className="w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500" />
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-slate-500">Hora</label>
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={e => setScheduledTime(e.target.value)}
+                      className={base}
+                    />
                   </div>
                 </div>
                 {!scheduledDate && (
-                  <p className="text-xs text-amber-500/80">⚠ Sem data, o conteúdo aparece em "Rascunhos sem data" no calendário.</p>
+                  <p className="text-xs" style={{ color: '#d97706' }}>
+                    ⚠ Sem data, o conteúdo aparece em "Rascunhos sem data" no calendário.
+                  </p>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-zinc-800">
-                <button onClick={save} disabled={saving || saved}
-                  className={`flex items-center gap-2 rounded-md px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-50 ${
-                    saved ? 'bg-green-600 text-white' : 'bg-white text-zinc-900 hover:bg-zinc-100'
-                  }`}>
+              {/* Salvar */}
+              <div
+                className="flex flex-wrap items-center gap-3 pt-4"
+                style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <button
+                  onClick={save}
+                  disabled={saving || saved}
+                  className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all disabled:opacity-60 ${
+                    saved ? '' : 'hover:opacity-90'
+                  }`}
+                  style={{
+                    background: saved
+                      ? 'linear-gradient(to right, #059669, #10b981)'
+                      : 'linear-gradient(to right, #2B80FF, #A855F7)',
+                  }}
+                >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar rascunho'}
+                  {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar conteúdo'}
                 </button>
-                <p className="text-xs text-zinc-600">Para publicar agora, salve primeiro e use o botão na página do conteúdo.</p>
+                <p className="text-xs text-slate-600">Para publicar, salve e use o botão na página do conteúdo.</p>
               </div>
             </div>
           )}

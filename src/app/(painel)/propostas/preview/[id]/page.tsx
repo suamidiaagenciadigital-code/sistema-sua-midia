@@ -47,7 +47,7 @@ export default async function PropostaPreviewPage({ params }: Props) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
         {[
           { label: 'Valor mensal', value: fmtValue },
           { label: 'Validade', value: `${p.valid_days} dias` },
