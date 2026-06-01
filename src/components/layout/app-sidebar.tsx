@@ -11,7 +11,9 @@ import {
   Megaphone,
   FileText,
   Settings,
+  X,
 } from 'lucide-react'
+import { useSidebar } from './sidebar-context'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -39,18 +41,31 @@ function SuaMidiaLogo() {
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { open, setOpen } = useSidebar()
 
   return (
     <aside
-      className="w-60 shrink-0 flex flex-col h-full"
+      className={`
+        fixed inset-y-0 left-0 z-50 w-60 flex flex-col h-full
+        transition-transform duration-300 ease-in-out
+        lg:relative lg:translate-x-0 lg:z-auto
+        ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}
       style={{ backgroundColor: '#0f1929', borderRight: '1px solid rgba(255,255,255,0.08)' }}
     >
       {/* Logo */}
       <div
-        className="px-5 py-5"
+        className="px-5 py-5 flex items-center justify-between"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
       >
         <SuaMidiaLogo />
+        <button
+          className="lg:hidden text-slate-500 hover:text-white transition-colors"
+          onClick={() => setOpen(false)}
+          aria-label="Fechar menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Navegação */}
@@ -61,6 +76,7 @@ export function AppSidebar() {
             <Link
               key={href}
               href={href}
+              onClick={() => setOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 lumina-nav-item ${active ? 'lumina-nav-active' : ''}`}
             >
               <Icon
