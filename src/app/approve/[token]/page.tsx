@@ -123,6 +123,7 @@ export default async function PublicApprovalPage({ params }: Props) {
       return da.localeCompare(db)
     })
   // Aprovados: ordem decrescente por data agendada (mais recente primeiro)
+  // Limitado aos 10 mais recentes para não sobrecarregar o mobile
   const approved = (contents ?? [])
     .filter(c => (c.status === 'approved_by_client' || c.status === 'published') && c.type !== 'story')
     .sort((a, b) => {
@@ -130,6 +131,7 @@ export default async function PublicApprovalPage({ params }: Props) {
       const db = b.scheduled_date ?? ''
       return db.localeCompare(da)
     })
+    .slice(0, 10)
 
   const initials = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
@@ -204,7 +206,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                       ) : (
                         <iframe
                           src={getDriveEmbedUrl(singleUrl)!}
-                          allow="autoplay; fullscreen"
+                          allow="fullscreen"
                           allowFullScreen
                           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
                         />
@@ -328,8 +330,17 @@ export default async function PublicApprovalPage({ params }: Props) {
                         <MediaCarousel urls={c.media_urls!} />
                       ) : isReel && singleUrl ? (
                         <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
-                          <iframe src={getDriveEmbedUrl(singleUrl)!} allow="autoplay; fullscreen" allowFullScreen
-                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }} />
+                          {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
+                            <video
+                              src={singleUrl}
+                              controls
+                              playsInline
+                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          ) : (
+                            <iframe src={getDriveEmbedUrl(singleUrl)!} allow="fullscreen" allowFullScreen
+                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }} />
+                          )}
                         </div>
                       ) : singleUrl ? (
                         <div className="w-full bg-zinc-900" style={{ aspectRatio: '4/5' }}>
