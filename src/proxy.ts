@@ -40,6 +40,12 @@ export async function proxy(request: NextRequest) {
     return supabaseResponse
   }
 
+  // ── Chamadas internas do cron (publish-now sem sessão de usuário) ──────
+  const cronSecret = request.headers.get('x-cron-secret')
+  if (cronSecret && cronSecret === process.env.CRON_SECRET) {
+    return supabaseResponse
+  }
+
   const isPortalRoute  = pathname.startsWith('/portal')
   const isPortalLogin  = pathname === '/portal/login'
   const isAgencyLogin  = pathname === '/login'
