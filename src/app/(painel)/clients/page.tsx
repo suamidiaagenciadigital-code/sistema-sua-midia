@@ -47,7 +47,7 @@ export default async function ClientsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-extrabold text-white">Clientes</h1>
           <p className="text-slate-500 text-sm mt-1">
@@ -56,7 +56,7 @@ export default async function ClientsPage() {
         </div>
         <Link
           href="/clients/new"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90 whitespace-nowrap"
           style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}
         >
           <Plus className="h-4 w-4" />
@@ -82,61 +82,74 @@ export default async function ClientsPage() {
           {/* Accent bar top */}
           <div className="h-0.5 w-full" style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }} />
 
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                <th className="text-left px-6 py-4 text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>Cliente</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>Nicho</th>
-                <th className="text-left px-6 py-4 text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>Status</th>
-                <th className="text-right px-6 py-4 text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map((client: Partial<Client> & { id: string }) => (
-                <tr
-                  key={client.id}
-                  className="transition-colors"
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                  onMouseEnter={undefined}
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <ClientIcon />
-                      <span className="font-semibold text-white">{client.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-400 max-w-xs">{client.niche}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold"
-                      style={statusStyle[client.status ?? 'ativo']}
-                    >
-                      {statusLabel[client.status ?? 'ativo']}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-4">
-                      <Link
-                        href={`/clients/${client.id}/calendar`}
-                        className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white transition-colors"
-                      >
-                        <CalendarDays className="h-3.5 w-3.5" />
-                        Calendário
-                      </Link>
-                      <div className="w-px h-4" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} />
-                      <Link
-                        href={`/clients/${client.id}`}
-                        className="text-xs font-semibold transition-colors"
-                        style={{ color: '#2B80FF' }}
-                      >
-                        Ver perfil →
-                      </Link>
-                    </div>
-                  </td>
+          {/* Mobile: cards */}
+          <div className="sm:hidden divide-y divide-white/5">
+            {clients.map((client: Partial<Client> & { id: string }) => (
+              <div key={client.id} className="flex items-center justify-between px-4 py-3 gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <ClientIcon />
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold text-sm truncate">{client.name}</p>
+                    <p className="text-slate-500 text-xs truncate">{client.niche}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"
+                    style={statusStyle[client.status ?? 'ativo']}
+                  >
+                    {statusLabel[client.status ?? 'ativo']}
+                  </span>
+                  <Link href={`/clients/${client.id}`} className="text-xs font-semibold" style={{ color: '#2B80FF' }}>
+                    →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: tabela */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <th className="text-left px-6 py-4 text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>Cliente</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>Nicho</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>Status</th>
+                  <th className="text-right px-6 py-4 text-xs font-semibold tracking-widest uppercase" style={{ color: '#475569' }}>Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {clients.map((client: Partial<Client> & { id: string }) => (
+                  <tr key={client.id} className="transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <ClientIcon />
+                        <span className="font-semibold text-white">{client.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-400 max-w-xs">{client.niche}</td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold" style={statusStyle[client.status ?? 'ativo']}>
+                        {statusLabel[client.status ?? 'ativo']}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-4">
+                        <Link href={`/clients/${client.id}/calendar`} className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white transition-colors">
+                          <CalendarDays className="h-3.5 w-3.5" />Calendário
+                        </Link>
+                        <div className="w-px h-4" style={{ backgroundColor: 'rgba(255,255,255,0.12)' }} />
+                        <Link href={`/clients/${client.id}`} className="text-xs font-semibold transition-colors" style={{ color: '#2B80FF' }}>
+                          Ver perfil →
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

@@ -117,7 +117,7 @@ export default function NovaPropostaPage() {
         {/* Dados básicos */}
         <section className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6 space-y-4">
           <h2 className="text-white font-semibold text-sm uppercase tracking-wide">Dados do cliente</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Nome da empresa *</label>
               <input name="client_name" value={clientName} onChange={e => handleClientNameChange(e.target.value)} required placeholder="Nortec Infra" className={inputCls} />
@@ -130,7 +130,7 @@ export default function NovaPropostaPage() {
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>WhatsApp de contato *</label>
               <input name="whatsapp" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required placeholder="+55 62 99999-9999" className={inputCls} />
@@ -153,7 +153,7 @@ export default function NovaPropostaPage() {
             <label className={labelCls}>Descrição do serviço</label>
             <textarea name="service_description" value={serviceDesc} onChange={e => setServiceDesc(e.target.value)} rows={2} className={inputCls + ' resize-none'} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>Valor mensal (R$) *</label>
               <input name="monthly_value" value={monthlyValue} onChange={e => setMonthlyValue(e.target.value)} required placeholder="1200" type="number" step="0.01" min="0" className={inputCls} />
@@ -175,14 +175,16 @@ export default function NovaPropostaPage() {
           </div>
           <div className="space-y-3">
             {deliverables.map((d, i) => (
-              <div key={i} className="grid grid-cols-[40px_1fr_1fr_90px_36px] gap-2 items-start">
-                <input value={d.icon} onChange={e => updateDeliverable(i, 'icon', e.target.value)} className={inputCls + ' text-center text-lg'} placeholder="🎠" maxLength={4} />
-                <input value={d.title} onChange={e => updateDeliverable(i, 'title', e.target.value)} className={inputCls} placeholder="Título" />
+              <div key={i} className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <input value={d.icon} onChange={e => updateDeliverable(i, 'icon', e.target.value)} className={inputCls + ' w-10 text-center text-lg shrink-0'} placeholder="🎠" maxLength={4} />
+                  <input value={d.title} onChange={e => updateDeliverable(i, 'title', e.target.value)} className={inputCls + ' flex-1'} placeholder="Título" />
+                  <input value={d.qty} onChange={e => updateDeliverable(i, 'qty', e.target.value)} className={inputCls + ' w-20 shrink-0'} placeholder="4/mês" />
+                  <button type="button" onClick={() => removeDeliverable(i)} className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg border border-zinc-700 text-zinc-600 hover:text-red-400 hover:border-red-900/50 transition-colors">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 <input value={d.description} onChange={e => updateDeliverable(i, 'description', e.target.value)} className={inputCls} placeholder="Descrição" />
-                <input value={d.qty} onChange={e => updateDeliverable(i, 'qty', e.target.value)} className={inputCls} placeholder="4/mês" />
-                <button type="button" onClick={() => removeDeliverable(i)} className="h-9 w-9 flex items-center justify-center rounded-lg border border-zinc-700 text-zinc-600 hover:text-red-400 hover:border-red-900/50 transition-colors">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
               </div>
             ))}
           </div>
@@ -210,7 +212,7 @@ export default function NovaPropostaPage() {
                 </div>
                 <div className="p-3 space-y-2">
                   {cat.items.map((item, ii) => (
-                    <div key={ii} className="grid grid-cols-[1fr_100px_36px] gap-2">
+                    <div key={ii} className="grid grid-cols-[1fr_80px_36px] sm:grid-cols-[1fr_100px_36px] gap-2">
                       <input value={item.name} onChange={e => updateAvulsoItem(ci, ii, 'name', e.target.value)} className={inputCls} placeholder="Nome do serviço" />
                       <input value={item.price} onChange={e => updateAvulsoItem(ci, ii, 'price', e.target.value)} className={inputCls} placeholder="R$ 0" type="number" min="0" />
                       <button type="button" onClick={() => removeAvulsoItem(ci, ii)} className="h-9 w-9 flex items-center justify-center rounded-lg border border-zinc-700 text-zinc-600 hover:text-red-400 hover:border-red-900/50 transition-colors">

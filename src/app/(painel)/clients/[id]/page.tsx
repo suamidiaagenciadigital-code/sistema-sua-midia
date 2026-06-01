@@ -8,6 +8,7 @@ import { ChevronLeft, Sparkles, Plug } from 'lucide-react'
 import { Client } from '@/lib/types'
 import { SubmitButton } from '../../_components/submit-button'
 import { ImportClientProfileButton } from '../import-profile-button'
+import { PortalAccessSection } from './portal-access-section'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -62,7 +63,7 @@ export default async function ClientPage({ params }: Props) {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link href="/clients" className="text-zinc-400 hover:text-white transition-colors">
             <ChevronLeft className="h-5 w-5" />
@@ -72,7 +73,7 @@ export default async function ClientPage({ params }: Props) {
             <p className="text-zinc-400 text-sm mt-0.5">{c.niche}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pl-8 sm:pl-0">
           <Link
             href={`/clients/${id}/content/new`}
             className="flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100 transition-colors"
@@ -87,7 +88,7 @@ export default async function ClientPage({ params }: Props) {
 
       <form action={update} className="space-y-8">
         <Section title="Identidade do negócio">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Nome" name="name" value={c.name} required />
             <Field label="Nicho / Segmento" name="niche" value={c.niche} required />
           </div>
@@ -120,7 +121,7 @@ export default async function ClientPage({ params }: Props) {
         <Section title="Contrato e operação">
           <Field label="Objetivo do mês" name="monthly_goal" value={c.monthly_goal} required type="textarea" rows={2} />
           <Field label="Serviços contratados" name="contracted_services" value={c.contracted_services} required type="textarea" rows={3} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Orçamento de anúncios" name="ad_budget" value={c.ad_budget} />
             <Field label="Limite de alterações" name="revision_limit" value={c.revision_limit} />
           </div>
@@ -135,7 +136,7 @@ export default async function ClientPage({ params }: Props) {
 
         <Section title="Identidade visual">
           <Field label="Referências visuais" name="visual_references" value={c.visual_references} type="textarea" rows={2} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Cores da marca (hex)" name="brand_colors"
               value={c.brand_colors?.join(', ')} hint="Separe por vírgula" />
             <Field label="Fontes da marca" name="brand_fonts" value={c.brand_fonts} />
@@ -188,6 +189,12 @@ export default async function ClientPage({ params }: Props) {
         </div>
         <ChevronLeft className="h-4 w-4 text-zinc-500 rotate-180" />
       </Link>
+
+      {/* Portal do Cliente */}
+      <PortalAccessSection
+        clientId={id}
+        hasAccess={!!c.portal_user_id}
+      />
 
       {/* Zona de perigo */}
       <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-5 space-y-3">
