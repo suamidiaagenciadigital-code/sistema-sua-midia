@@ -94,14 +94,19 @@ export default async function ClientsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span
-                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"
-                    style={statusStyle[client.status ?? 'ativo']}
+                  <Link
+                    href={`/clients/${client.id}/calendar`}
+                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-white border border-zinc-700 rounded-lg px-2.5 py-1.5 transition-colors"
                   >
-                    {statusLabel[client.status ?? 'ativo']}
-                  </span>
-                  <Link href={`/clients/${client.id}`} className="text-xs font-semibold" style={{ color: '#2B80FF' }}>
-                    →
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    <span className="hidden xs:inline">Calendário</span>
+                  </Link>
+                  <Link
+                    href={`/clients/${client.id}`}
+                    className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-blue-800/50 transition-colors"
+                    style={{ color: '#2B80FF', backgroundColor: 'rgba(43,128,255,0.08)' }}
+                  >
+                    Perfil →
                   </Link>
                 </div>
               </div>
