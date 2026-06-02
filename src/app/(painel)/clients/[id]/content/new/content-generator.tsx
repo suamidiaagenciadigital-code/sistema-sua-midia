@@ -9,6 +9,8 @@ import {
   Play, LayoutGrid, Image as ImageIcon, Zap,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useDriveRehost } from '@/lib/use-drive-rehost'
+import { Link2 } from 'lucide-react'
 
 // ── Lumina input class ────────────────────────────────────────
 const base = "w-full rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none transition-colors bg-white/5 border border-white/10"
@@ -26,6 +28,7 @@ function VideoUploadField({
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const { state: rehostState, error: rehostError, isDriveUrl, rehost } = useDriveRehost(clientId)
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -54,41 +57,60 @@ function VideoUploadField({
         body: JSON.stringify({ clientId, file_url: publicUrl, file_type: 'video', original_name: file.name, size_bytes: file.size, tags: ['reel'] }),
       })
       onChange(publicUrl)
-    } catch (err: any) {
-      setUploadError(err.message ?? 'Erro no upload')
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : 'Erro no upload')
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
     }
   }
 
+  const isRehosting = rehostState === 'loading'
+
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
+      <div className="relative flex items-center">
+        <Link2 className="absolute left-3 h-4 w-4 text-slate-600 pointer-events-none shrink-0" />
+        {isRehosting && <Loader2 className="absolute right-3 h-4 w-4 text-blue-400 animate-spin pointer-events-none" />}
         <input
           type="url"
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder="Cole o link do Supabase ou use o botão abaixo"
-          className={base + ' flex-1'}
+          onBlur={e => { if (isDriveUrl(e.target.value)) rehost(e.target.value, onChange) }}
+          onPaste={e => {
+            const pasted = e.clipboardData.getData('text')
+            if (/drive\.google\.com/.test(pasted)) setTimeout(() => rehost(pasted, onChange), 100)
+          }}
+          placeholder="Cole o link do Drive ou Supabase"
+          className={base + ' flex-1 pl-9 pr-9'}
         />
       </div>
+      {isRehosting && (
+        <p className="text-xs text-blue-400 flex items-center gap-1.5">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Hospedando vídeo do Drive no Supabase...
+        </p>
+      )}
+      {rehostState === 'done' && (
+        <p className="text-xs text-emerald-400">✓ Vídeo transferido do Drive para o Supabase automaticamente</p>
+      )}
+      {rehostError && <p className="text-xs text-red-400">Rehost: {rehostError}</p>}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          disabled={uploading}
+          disabled={uploading || isRehosting}
           className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}
         >
           {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-          {uploading ? 'Enviando vídeo...' : 'Subir vídeo do computador'}
+          {uploading ? 'Enviando...' : 'Subir do computador'}
         </button>
         <span className="text-xs text-slate-600">MP4, MOV, WebM</span>
       </div>
       <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={handleFile} />
       {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
-      {value && value.includes('supabase') && (
+      {value && value.includes('supabase') && rehostState === 'idle' && (
         <p className="text-xs text-emerald-400">✓ Vídeo hospedado no Supabase — pronto para Instagram</p>
       )}
     </div>
