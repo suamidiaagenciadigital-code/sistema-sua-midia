@@ -186,10 +186,12 @@ function PostCard({ post, rank }: { post: Post; rank?: number }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function PortalMetricas({ metrics, error, hasConfig }: {
+export default function PortalMetricas({ metrics, error, hasConfig, monthLabel, prevLabel }: {
   metrics: Metrics | null
   error: string | null
   hasConfig: boolean
+  monthLabel?: string
+  prevLabel?: string
 }) {
   if (!hasConfig) {
     return (
@@ -271,7 +273,7 @@ export default function PortalMetricas({ metrics, error, hasConfig }: {
       {/* ── Barras de progresso comparativas ── */}
       <div>
         <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-          <span>📈</span> Evolução mês a mês
+          <span>📈</span> {monthLabel ?? 'Este mês'} vs {prevLabel ?? 'Mês anterior'}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <CompareBar
