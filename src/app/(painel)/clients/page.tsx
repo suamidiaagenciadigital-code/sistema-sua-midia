@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Plus, CalendarDays, Users } from 'lucide-react'
+import { Plus, CalendarDays, Users, Building2 } from 'lucide-react'
 import { Client } from '@/lib/types'
 
 const statusLabel: Record<string, string> = {
@@ -21,16 +21,7 @@ function ClientIcon() {
       className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
       style={{ background: 'linear-gradient(135deg, rgba(43,128,255,0.25), rgba(168,85,247,0.25))', border: '1px solid rgba(43,128,255,0.3)' }}
     >
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-        <defs>
-          <linearGradient id="icon-g" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2B80FF"/>
-            <stop offset="100%" stopColor="#A855F7"/>
-          </linearGradient>
-        </defs>
-        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="url(#icon-g)" strokeWidth="1.5" fill="none"/>
-        <path d="M9 22V12h6v10" stroke="url(#icon-g)" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
+      <Building2 className="h-4 w-4" style={{ color: '#2B80FF' }} />
     </div>
   )
 }
