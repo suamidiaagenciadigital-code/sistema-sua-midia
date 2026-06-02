@@ -488,6 +488,56 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ── Upload direto para Story (imagem ou vídeo) ────────────────
+function StoryUploadButton({ clientId, onUploaded }: { clientId: string; onUploaded: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const presignResp = await fetch('/api/media/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, fileName: file.name, contentType: file.type }),
+      })
+      if (!presignResp.ok) throw new Error((await presignResp.json()).error ?? 'Erro ao gerar URL')
+      const { path, token, publicUrl } = await presignResp.json()
+      const supabase = createClient()
+      const { error: uploadErr } = await supabase.storage.from('media').uploadToSignedUrl(path, token, file, { contentType: file.type })
+      if (uploadErr) throw new Error(uploadErr.message)
+      onUploaded(publicUrl)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro no upload')
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+        style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}
+      >
+        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        {uploading ? 'Enviando...' : 'Subir imagem/vídeo do computador'}
+      </button>
+      <span className="text-xs text-slate-600">JPG, PNG, MP4, MOV</span>
+      <input ref={fileRef} type="file" accept="image/*,video/*" className="hidden" onChange={handleFile} />
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────
 
 export function ContentEditForm({
@@ -619,7 +669,7 @@ export function ContentEditForm({
 
             {/* Story: mídias */}
             {content.type === 'story' ? (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <FieldLabel>Links das mídias (1080×1920) — uma por linha</FieldLabel>
                 <div className="relative">
                   <textarea
@@ -643,8 +693,17 @@ export function ContentEditForm({
                     </div>
                   )}
                 </div>
+                {/* Upload direto do computador para Story */}
+                <StoryUploadButton
+                  clientId={clientId}
+                  onUploaded={url => {
+                    const newText = mediaUrlsText ? `${mediaUrlsText}\n${url}` : url
+                    setMediaUrlsText(newText)
+                    setImageUrl(newText.split('\n')[0]?.trim() ?? '')
+                  }}
+                />
                 <input type="hidden" name="generated_image_url" value={imageUrl} />
-                <p className="text-xs text-slate-600">Cole um link por linha. O preview mostra o primeiro. Links do Drive são transferidos automaticamente.</p>
+                <p className="text-xs text-slate-600">Cole links do Drive (são transferidos automaticamente) ou suba arquivos do computador.</p>
               </div>
             ) : (
               <>

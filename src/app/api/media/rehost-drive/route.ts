@@ -39,31 +39,52 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Não foi possível baixar o arquivo do Drive.' }, { status: 400 })
   }
 
-  const contentType = fileResp.headers.get('content-type') ?? 'application/octet-stream'
-
-  // Detectar extensão a partir do content-type
-  const extMap: Record<string, string> = {
-    'video/mp4': 'mp4',
-    'video/quicktime': 'mov',
-    'video/webm': 'webm',
-    'video/x-m4v': 'm4v',
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/gif': 'gif',
-    'image/webp': 'webp',
-  }
-  const baseType = contentType.split(';')[0].trim()
-  const ext = extMap[baseType] ?? (baseType.startsWith('video/') ? 'mp4' : 'jpg')
-
+  const contentTypeHeader = fileResp.headers.get('content-type') ?? 'application/octet-stream'
   const buffer = await fileResp.arrayBuffer()
   const bytes = new Uint8Array(buffer)
 
+  // Detectar tipo real pelo magic bytes (Drive às vezes retorna content-type errado)
+  function detectRealType(buf: Uint8Array, declared: string): { mime: string; ext: string } {
+    // MP4: bytes 4-7 == 'ftyp' (0x66 0x74 0x79 0x70)
+    if (buf.length > 11 && buf[4] === 0x66 && buf[5] === 0x74 && buf[6] === 0x79 && buf[7] === 0x70) {
+      return { mime: 'video/mp4', ext: 'mp4' }
+    }
+    // MOV: bytes 4-7 == 'ftyp' with 'qt  ' or 'moov'
+    if (buf.length > 7 && buf[4] === 0x6D && buf[5] === 0x6F && buf[6] === 0x6F && buf[7] === 0x76) {
+      return { mime: 'video/quicktime', ext: 'mov' }
+    }
+    // WebM: starts with 0x1A 0x45 0xDF 0xA3
+    if (buf.length > 3 && buf[0] === 0x1A && buf[1] === 0x45 && buf[2] === 0xDF && buf[3] === 0xA3) {
+      return { mime: 'video/webm', ext: 'webm' }
+    }
+    // JPEG: starts with 0xFF 0xD8 0xFF
+    if (buf.length > 2 && buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
+      return { mime: 'image/jpeg', ext: 'jpg' }
+    }
+    // PNG: starts with 0x89 0x50 0x4E 0x47
+    if (buf.length > 3 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
+      return { mime: 'image/png', ext: 'png' }
+    }
+    // GIF: starts with 'GIF'
+    if (buf.length > 2 && buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) {
+      return { mime: 'image/gif', ext: 'gif' }
+    }
+    // Fallback: usar o content-type do header
+    const base = declared.split(';')[0].trim()
+    const extMap: Record<string, string> = {
+      'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm',
+      'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp',
+    }
+    return { mime: base, ext: extMap[base] ?? (base.startsWith('video/') ? 'mp4' : 'jpg') }
+  }
+
+  const { mime, ext } = detectRealType(bytes, contentTypeHeader)
   const path = `${clientId}/drive-${fileId}-${Date.now()}.${ext}`
   const db = createServiceClient()
 
   const { error: uploadError } = await db.storage
     .from('media')
-    .upload(path, bytes, { contentType: baseType, upsert: true })
+    .upload(path, bytes, { contentType: mime, upsert: true })
 
   if (uploadError) {
     return NextResponse.json({ error: `Erro ao salvar no Supabase: ${uploadError.message}` }, { status: 500 })
@@ -71,5 +92,5 @@ export async function POST(req: NextRequest) {
 
   const { data: { publicUrl } } = db.storage.from('media').getPublicUrl(path)
 
-  return NextResponse.json({ url: publicUrl, contentType: baseType })
+  return NextResponse.json({ url: publicUrl, contentType: mime, isVideo: mime.startsWith('video/') })
 }
