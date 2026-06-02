@@ -516,6 +516,37 @@ export function ContentEditForm({
   const [mediaUrlsText, setMediaUrlsText] = useState((content.media_urls ?? []).join('\n'))
   const [scheduledTime, setScheduledTime] = useState(content.scheduled_time ?? '09:00')
   const [revisionNotes, setRevisionNotes] = useState(content.revision_notes ?? '')
+  const [rehostingMedia, setRehostingMedia] = useState(false)
+
+  // Rehosta todas as URLs do Drive no textarea para Supabase
+  async function rehostMediaUrlsInTextarea(text: string) {
+    const lines = text.split('\n').map(u => u.trim()).filter(Boolean)
+    const driveLines = lines.filter(u => /drive\.google\.com/.test(u))
+    if (driveLines.length === 0) return
+
+    setRehostingMedia(true)
+    try {
+      const updated = await Promise.all(
+        lines.map(async (url) => {
+          if (!/drive\.google\.com/.test(url)) return url
+          try {
+            const res = await fetch('/api/media/rehost-drive', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ driveUrl: url, clientId }),
+            })
+            const data = await res.json()
+            return res.ok ? data.url : url
+          } catch { return url }
+        })
+      )
+      const newText = updated.join('\n')
+      setMediaUrlsText(newText)
+      setImageUrl(updated[0] ?? '')
+    } finally {
+      setRehostingMedia(false)
+    }
+  }
 
   // Estado do botão Publicar agora
   const [publishing, setPublishing] = useState(false)
@@ -590,16 +621,30 @@ export function ContentEditForm({
             {content.type === 'story' ? (
               <div className="space-y-1.5">
                 <FieldLabel>Links das mídias (1080×1920) — uma por linha</FieldLabel>
-                <textarea
-                  name="media_urls_text"
-                  rows={3}
-                  value={mediaUrlsText}
-                  onChange={e => { setMediaUrlsText(e.target.value); setImageUrl(e.target.value.split('\n')[0]?.trim() ?? '') }}
-                  placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
-                  className={base + ' resize-none'}
-                />
+                <div className="relative">
+                  <textarea
+                    name="media_urls_text"
+                    rows={3}
+                    value={mediaUrlsText}
+                    onChange={e => { setMediaUrlsText(e.target.value); setImageUrl(e.target.value.split('\n')[0]?.trim() ?? '') }}
+                    onBlur={e => rehostMediaUrlsInTextarea(e.target.value)}
+                    onPaste={e => {
+                      const pasted = e.clipboardData.getData('text')
+                      if (/drive\.google\.com/.test(pasted)) setTimeout(() => rehostMediaUrlsInTextarea(pasted), 100)
+                    }}
+                    placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                    className={base + ' resize-none'}
+                  />
+                  {rehostingMedia && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
+                      <span className="text-xs text-blue-400 flex items-center gap-1.5">
+                        <Loader2 className="h-3 w-3 animate-spin" /> Hospedando no Supabase...
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <input type="hidden" name="generated_image_url" value={imageUrl} />
-                <p className="text-xs text-slate-600">Cole um link por linha. O preview mostra o primeiro.</p>
+                <p className="text-xs text-slate-600">Cole um link por linha. O preview mostra o primeiro. Links do Drive são transferidos automaticamente.</p>
               </div>
             ) : (
               <>
@@ -637,15 +682,29 @@ export function ContentEditForm({
                 {content.type === 'carrossel' ? (
                   <div className="space-y-1.5">
                     <FieldLabel>URLs dos slides (uma por linha)</FieldLabel>
-                    <textarea
-                      name="media_urls_text"
-                      rows={5}
-                      value={mediaUrlsText}
-                      onChange={e => setMediaUrlsText(e.target.value)}
-                      placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
-                      className={base + ' resize-none'}
-                    />
-                    <p className="text-xs text-slate-600">Cole um link do Google Drive por linha. O preview atualiza na hora.</p>
+                    <div className="relative">
+                      <textarea
+                        name="media_urls_text"
+                        rows={5}
+                        value={mediaUrlsText}
+                        onChange={e => setMediaUrlsText(e.target.value)}
+                        onBlur={e => rehostMediaUrlsInTextarea(e.target.value)}
+                        onPaste={e => {
+                          const pasted = e.clipboardData.getData('text')
+                          if (/drive\.google\.com/.test(pasted)) setTimeout(() => rehostMediaUrlsInTextarea(pasted), 100)
+                        }}
+                        placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                        className={base + ' resize-none'}
+                      />
+                      {rehostingMedia && (
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
+                          <span className="text-xs text-blue-400 flex items-center gap-1.5">
+                            <Loader2 className="h-3 w-3 animate-spin" /> Hospedando no Supabase...
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-600">Cole um link por linha. Links do Drive são transferidos automaticamente.</p>
                   </div>
                 ) : (
                   <div className="space-y-1.5">
