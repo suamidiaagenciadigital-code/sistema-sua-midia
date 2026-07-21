@@ -56,7 +56,7 @@ ${client.ai_notes ? `## NOTAS ESTRATÉGICAS (REGRAS IMPORTANTES)\n${client.ai_no
 - Mantenha o tom de voz definido
 - Adapte o conteúdo ao tipo solicitado (reel, carrossel, imagem, story)
 - Para reels: gancho forte nos primeiros 2 segundos
-- Para carrosseis: estrutura educativa ou comparativa
+- Para carrosseis: estrutura educativa ou comparativa, MÁXIMO 5 slides (mínimo 3)
 - Responda SEMPRE em JSON válido conforme o schema solicitado`
 }
 
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   const typeInstructions: Record<string, string> = {
     reel: 'Crie um roteiro de Reel (vídeo vertical 9:16, ~30-60s). Gancho forte nos primeiros 2 segundos.',
-    carrossel: 'Crie um Carrossel (5-8 slides). Estrutura educativa ou comparativa. Cada slide tem um título curto.',
+    carrossel: 'Crie um Carrossel (3-5 slides). Estrutura educativa ou comparativa. Cada slide tem um título curto.',
     imagem: 'Crie conteúdo para uma imagem de feed (1:1 ou 4:5). Copy direta e impactante.',
     story: 'Crie conteúdo para um Story (9:16, efêmero). Tom mais leve e conversacional.',
   }
@@ -86,13 +86,15 @@ Responda EXATAMENTE neste JSON:
 {
   "title": "título resumido do conteúdo",
   "caption": "copy/legenda completa com emojis e NO MÁXIMO 5 hashtags relevantes",
-  "script": "roteiro detalhado (para reels) ou estrutura de slides (para carrosseis) — null para imagem/story",
+  "script": "roteiro detalhado (para reels) ou estrutura de slides (para carrosseis, MÍNIMO 3 e MÁXIMO 5 slides) — null para imagem/story",
   "image_prompt": "prompt em inglês para geração de imagem com identidade visual do cliente",
   "cta": "call to action específico",
   "partner_mentioned": "nome do parceiro se relevante — null se não houver"
 }
 
-REGRA OBRIGATÓRIA: a legenda deve ter NO MÁXIMO 5 hashtags. Priorize as mais relevantes e de maior alcance para o nicho.`
+REGRAS OBRIGATÓRIAS:
+- A legenda deve ter NO MÁXIMO 5 hashtags. Priorize as mais relevantes e de maior alcance para o nicho.
+- Para carrossel: gere EXATAMENTE entre 3 e 5 slides no campo "script". Nunca gere 6 ou mais slides.`
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5',

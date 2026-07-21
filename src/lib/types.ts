@@ -54,6 +54,7 @@ export interface Client {
   facebook_page_id?: string | null
   facebook_page_token?: string | null
   instagram_account_id?: string | null
+  portal_user_id?: string | null
   created_at: string
   updated_at: string
 }

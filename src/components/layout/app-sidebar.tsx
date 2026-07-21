@@ -28,7 +28,7 @@ const navItems = [
 function SuaMidiaLogo() {
   return (
     <Image
-      src="/logotipo-2023 (horizontal) - branco.png"
+      src="/logo.png"
       alt="Sua Mídia — Agência Digital"
       width={180}
       height={48}

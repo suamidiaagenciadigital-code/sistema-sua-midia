@@ -575,7 +575,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     }
   }
 
-  const save = async () => {
+  const save = async (status: 'draft' | 'pending_my_approval' = 'draft') => {
     if (!edited) return
     if (!edited.title?.trim()) {
       setError('Preencha o título antes de salvar.')
@@ -593,7 +593,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         type,
         scheduled_date: scheduledDate || null,
         scheduled_time: scheduledDate ? scheduledTime : null,
-        status: 'sent_to_client',
+        status,
         ...edited,
         generated_image_url: type !== 'carrossel' && creativeUrl.trim() ? creativeUrl.trim() : null,
         media_urls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : null,
@@ -970,7 +970,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                 style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
               >
                 <button
-                  onClick={save}
+                  onClick={() => save('pending_my_approval')}
                   disabled={saving || saved}
                   className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all disabled:opacity-60 ${
                     saved ? '' : 'hover:opacity-90'
@@ -982,9 +982,21 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                   }}
                 >
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar conteúdo'}
+                  {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Enviar para aprovação'}
                 </button>
-                <p className="text-xs text-slate-600">Para publicar, salve e use o botão na página do conteúdo.</p>
+                <button
+                  onClick={() => save('draft')}
+                  disabled={saving || saved}
+                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 hover:text-white"
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    color: '#94a3b8',
+                  }}
+                >
+                  <Save className="h-4 w-4" />
+                  Salvar rascunho
+                </button>
               </div>
             </div>
           )}

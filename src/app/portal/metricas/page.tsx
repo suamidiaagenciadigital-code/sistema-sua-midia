@@ -30,25 +30,26 @@ const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
   'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
 async function fetchPeriodInsights(igId: string, t: string, since: number, until: number) {
+  // v21.0: 'impressions' foi substituído por 'views'
   const res = await fetch(
-    `${IG_API}/${igId}/insights?metric=reach,impressions&period=day&since=${since}&until=${until}&access_token=${t}`,
+    `${IG_API}/${igId}/insights?metric=reach,views&period=day&since=${since}&until=${until}&access_token=${t}`,
     { cache: 'no-store' }
   )
   const data = await res.json()
 
   if (data.error) {
     console.error('[metrics insights error]', JSON.stringify(data.error))
-    return { reach: 0, impressions: 0, apiError: data.error.message as string }
+    return { reach: 0, views: 0, apiError: data.error.message as string }
   }
 
   let reach = 0
-  let impressions = 0
+  let views = 0
   for (const m of data.data ?? []) {
     const sum = (m.values ?? []).reduce((acc: number, v: { value: number }) => acc + (v.value ?? 0), 0)
-    if (m.name === 'reach')       reach = sum
-    if (m.name === 'impressions') impressions = sum
+    if (m.name === 'reach') reach = sum
+    if (m.name === 'views') views = sum
   }
-  return { reach, impressions, apiError: null }
+  return { reach, views, apiError: null }
 }
 
 async function fetchInstagramMetrics(igId: string, token: string, year: number, month: number) {

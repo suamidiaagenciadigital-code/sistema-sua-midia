@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, CalendarDays, ExternalLink } from 'luc
 import { STATUS_DOT, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
 import { ImportCalendarButton } from './import-calendar-button'
 import { DraggableCalendar } from './draggable-calendar'
+import { ClientSwitcher } from './client-switcher'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -18,13 +19,13 @@ const STATUS_BADGE_STYLE: Record<ContentStatus, React.CSSProperties> = {
   approved_by_me:      { backgroundColor: 'rgba(29,78,216,0.3)', color: '#60a5fa' },
   sent_to_client:      { backgroundColor: 'rgba(154,52,18,0.3)', color: '#fb923c' },
   approved_by_client:  { backgroundColor: 'rgba(20,83,45,0.3)',  color: '#4ade80' },
-  published:           { backgroundColor: 'rgba(6,78,59,0.4)',   color: '#34d399' },
+  published:           { backgroundColor: 'rgba(12,74,110,0.4)',  color: '#38bdf8' },
   revision:            { backgroundColor: 'rgba(127,29,29,0.3)', color: '#f87171' },
 }
 
 // Stats card definitions
 const STATS_CARDS = [
-  { status: 'published'          as ContentStatus, label: 'Publicados',          dotClass: 'bg-emerald-400' },
+  { status: 'published'          as ContentStatus, label: 'Publicados',          dotClass: 'bg-sky-400'     },
   { status: 'approved_by_client' as ContentStatus, label: 'Aprovados cliente',   dotClass: 'bg-green-400'   },
   { status: 'sent_to_client'     as ContentStatus, label: 'Enviados',            dotClass: 'bg-orange-400'  },
   { status: 'approved_by_me'     as ContentStatus, label: 'Aprovados por mim',   dotClass: 'bg-blue-400'    },
@@ -44,6 +45,13 @@ export default async function CalendarPage({ params, searchParams }: Props) {
   const supabase = await createClient()
   const { data: client } = await supabase.from('clients').select('id, name').eq('id', id).single()
   if (!client) notFound()
+
+  // Clientes ativos para o switcher
+  const { data: activeClients } = await supabase
+    .from('clients')
+    .select('id, name')
+    .eq('status', 'ativo')
+    .order('name')
 
   // Token de aprovação para o link de pré-visualização do cliente
   const { data: clientExtra } = await supabase
@@ -107,7 +115,13 @@ export default async function CalendarPage({ params, searchParams }: Props) {
           </Link>
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white capitalize">{monthName} {year}</h1>
-            <p className="text-slate-500 text-sm mt-0.5">{client.name} · Calendário editorial</p>
+            <ClientSwitcher
+              currentId={id}
+              currentName={client.name}
+              clients={activeClients ?? []}
+              month={month}
+              year={year}
+            />
           </div>
         </div>
 

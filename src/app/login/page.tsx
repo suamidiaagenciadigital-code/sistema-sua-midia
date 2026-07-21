@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: Props) {
         {/* Logo */}
         <div className="flex flex-col items-center gap-4">
           <Image
-            src="/logotipo-2023 (horizontal) - branco.png"
+            src="/logo.png"
             alt="Sua Mídia — Agência Digital"
             width={280}
             height={75}

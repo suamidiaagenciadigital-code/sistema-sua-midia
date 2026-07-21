@@ -11,6 +11,7 @@ export default async function DashboardPage() {
     { count: scheduledThisWeek },
     { count: openTickets },
     { data: nextContents },
+    { data: firstClient },
   ] = await Promise.all([
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
     supabase.from('contents').select('*', { count: 'exact', head: true }).eq('status', 'pending_my_approval'),
@@ -24,6 +25,12 @@ export default async function DashboardPage() {
       .eq('status', 'pending_my_approval')
       .order('scheduled_date', { ascending: true })
       .limit(5),
+    supabase.from('clients')
+      .select('id')
+      .eq('status', 'ativo')
+      .order('name')
+      .limit(1)
+      .single(),
   ])
 
   const metrics = [
@@ -65,10 +72,14 @@ export default async function DashboardPage() {
     reel: 'Reel', carrossel: 'Carrossel', imagem: 'Imagem', story: 'Story'
   }
 
+  const calendarHref = firstClient
+    ? `/clients/${firstClient.id}/calendar`
+    : '/clients'
+
   const quickActions = [
     { label: 'Novo cliente', href: '/clients/new' },
     { label: 'Ver clientes', href: '/clients' },
-    { label: 'Ver aprovações', href: '/approvals' },
+    { label: 'Ver calendário', href: calendarHref },
     { label: 'Atendimento', href: '/support' },
   ]
 
@@ -100,6 +111,25 @@ export default async function DashboardPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Atalhos rápidos */}
+      <div
+        className="rounded-lg p-5"
+        style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        <h2 className="text-sm font-semibold text-white mb-4">Atalhos rápidos</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {quickActions.map(({ label, href }) => (
+            <Link
+              key={label}
+              href={href}
+              className="px-3 py-2.5 text-sm text-slate-500 hover:text-white transition-colors text-center rounded-lg lumina-quick-action"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Próximos para aprovar */}
@@ -152,25 +182,6 @@ export default async function DashboardPage() {
             ))}
           </div>
         )}
-      </div>
-
-      {/* Atalhos rápidos */}
-      <div
-        className="rounded-lg p-5"
-        style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
-      >
-        <h2 className="text-sm font-semibold text-white mb-4">Atalhos rápidos</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {quickActions.map(({ label, href }) => (
-            <Link
-              key={label}
-              href={href}
-              className="px-3 py-2.5 text-sm text-slate-500 hover:text-white transition-colors text-center rounded-lg lumina-quick-action"
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
       </div>
     </div>
   )

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
-// Cron Job — chamado pelo Vercel a cada 5 minutos
+// Cron Job — chamado diariamente às 11:10 BRT (14:10 UTC)
 // Publica automaticamente conteúdos aprovados cujo scheduled_date+time já passou
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
   // Vercel envia Authorization: Bearer {CRON_SECRET} automaticamente
@@ -65,42 +65,29 @@ export async function GET(req: NextRequest) {
       : null) ??
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
-  const results: Array<{
-    id: string
-    ok: boolean
-    facebook?: unknown
-    instagram?: unknown
-    error?: string
-  }> = []
-
-  for (const content of toPublish) {
-    try {
-      console.log(`[cron] Publicando conteúdo ${content.id} (agendado: ${content.scheduled_date} ${content.scheduled_time})`)
-
-      const resp = await fetch(`${baseUrl}/api/contents/${content.id}/publish-now`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-cron-secret': process.env.CRON_SECRET ?? '',
-        },
-        body: JSON.stringify({}),
-      })
-
-      const data = await resp.json().catch(() => ({}))
-      results.push({
-        id: content.id,
-        ok: data.ok ?? false,
-        facebook: data.facebook,
-        instagram: data.instagram,
-      })
-
-      console.log(`[cron] Resultado ${content.id}:`, JSON.stringify(data))
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      console.error(`[cron] Erro ao publicar ${content.id}:`, msg)
-      results.push({ id: content.id, ok: false, error: msg })
-    }
-  }
+  // Publica todos em paralelo — mais rápido e dentro do limite de timeout do plano
+  const results = await Promise.all(
+    toPublish.map(async (content) => {
+      try {
+        console.log(`[cron] Publicando ${content.id} (${content.scheduled_date} ${content.scheduled_time})`)
+        const resp = await fetch(`${baseUrl}/api/contents/${content.id}/publish-now`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-cron-secret': process.env.CRON_SECRET ?? '',
+          },
+          body: JSON.stringify({}),
+        })
+        const data = await resp.json().catch(() => ({}))
+        console.log(`[cron] Resultado ${content.id}:`, JSON.stringify(data))
+        return { id: content.id, ok: data.ok ?? false, facebook: data.facebook, instagram: data.instagram }
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error(`[cron] Erro ${content.id}:`, msg)
+        return { id: content.id, ok: false, error: msg }
+      }
+    })
+  )
 
   return NextResponse.json({
     ok: true,

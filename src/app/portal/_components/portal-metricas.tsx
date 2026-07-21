@@ -13,7 +13,7 @@ type Post = {
   postMetrics: { reach?: number; impressions?: number; saved?: number }
 }
 
-type Period = { reach: number; impressions: number }
+type Period = { reach: number; views: number; apiError?: string | null }
 
 type Metrics = {
   account: { followers_count: number; media_count: number; name: string }
@@ -253,11 +253,11 @@ export default function PortalMetricas({ metrics, error, hasConfig, monthLabel, 
           sub="contas únicas alcançadas"
         />
         <SummaryCard
-          label="Impressões"
-          value={fmt(current.impressions)}
+          label="Visualizações"
+          value={fmt(current.views)}
           icon="👁️"
-          current={current.impressions}
-          previous={previous.impressions}
+          current={current.views}
+          previous={previous.views}
           sub="visualizações totais"
         />
         <SummaryCard
@@ -283,10 +283,10 @@ export default function PortalMetricas({ metrics, error, hasConfig, monthLabel, 
             previous={previous.reach}
           />
           <CompareBar
-            label="Impressões"
+            label="Visualizações"
             icon="👁️"
-            current={current.impressions}
-            previous={previous.impressions}
+            current={current.views}
+            previous={previous.views}
           />
           <CompareBar
             label="Engajamento médio"

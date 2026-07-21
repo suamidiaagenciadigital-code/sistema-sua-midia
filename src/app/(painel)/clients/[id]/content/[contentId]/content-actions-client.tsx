@@ -1,18 +1,21 @@
 'use client'
 
 import { useState } from 'react'
+import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { updateStatusAction } from './actions'
 
 interface Props {
   clientId: string
   contentId: string
   currentStatus: string
+  contentType: string
 }
 
-export function ContentStatusActions({ clientId, contentId, currentStatus }: Props) {
+export function ContentStatusActions({ clientId, contentId, currentStatus, contentType }: Props) {
   const [revisionNotes, setRevisionNotes] = useState('')
   const [showRevision, setShowRevision] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(true)
 
   const act = async (status: string, notes?: string) => {
     setLoading(true)
@@ -21,69 +24,131 @@ export function ContentStatusActions({ clientId, contentId, currentStatus }: Pro
     setShowRevision(false)
   }
 
-  const btn = (label: string, onClick: () => void, variant: 'primary' | 'danger' | 'secondary' = 'secondary') => (
+  const btnPrimary = (label: string, onClick: () => void) => (
     <button
       onClick={onClick}
       disabled={loading}
-      className={`rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
-        variant === 'primary' ? 'bg-white text-zinc-900 hover:bg-zinc-100' :
-        variant === 'danger' ? 'border border-red-800 text-red-400 hover:bg-red-900/30' :
-        'border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500'
-      }`}
+      className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+      style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}
+    >
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+      {label}
+    </button>
+  )
+
+  const btnDanger = (label: string, onClick: () => void) => (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      className="rounded-full px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-50"
+      style={{
+        border: '1px solid rgba(239,68,68,0.4)',
+        backgroundColor: 'rgba(239,68,68,0.08)',
+        color: '#f87171',
+      }}
+    >
+      {label}
+    </button>
+  )
+
+  const btnSecondary = (label: string, onClick: () => void) => (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      className="rounded-full px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-50 hover:text-white"
+      style={{
+        border: '1px solid rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        color: '#64748b',
+      }}
     >
       {label}
     </button>
   )
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {currentStatus === 'draft' && (
-          btn('Enviar para aprovação', () => act('pending_my_approval'), 'primary')
-        )}
-        {currentStatus === 'pending_my_approval' && (<>
-          {btn('Aprovar', () => act('approved_by_me'), 'primary')}
-          {btn('Pedir revisão', () => setShowRevision(v => !v), 'danger')}
-        </>)}
-        {currentStatus === 'approved_by_me' && (
-          btn('Marcar como enviado ao cliente', () => act('sent_to_client'), 'primary')
-        )}
-        {currentStatus === 'sent_to_client' && (<>
-          {btn('Cliente aprovou', () => act('approved_by_client'), 'primary')}
-          {btn('Cliente pediu revisão', () => setShowRevision(v => !v), 'danger')}
-        </>)}
-        {currentStatus === 'approved_by_client' && (
-          btn('Marcar como publicado', () => act('published'), 'primary')
-        )}
-        {currentStatus === 'revision' && (
-          btn('Enviar para aprovação', () => act('pending_my_approval'), 'primary')
-        )}
-        {currentStatus !== 'draft' && currentStatus !== 'published' && (
-          btn('Voltar para rascunho', () => act('draft'))
-        )}
-      </div>
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      {/* Header clicável */}
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors hover:bg-white/[0.02]"
+      >
+        <span className="text-sm font-semibold text-white">Fluxo de aprovação</span>
+        {open
+          ? <ChevronUp className="h-4 w-4 text-slate-500" />
+          : <ChevronDown className="h-4 w-4 text-slate-500" />
+        }
+      </button>
 
-      {showRevision && (
-        <div className="space-y-2">
-          <textarea
-            value={revisionNotes}
-            onChange={e => setRevisionNotes(e.target.value)}
-            placeholder="Descreva o que precisa ser revisado..."
-            rows={3}
-            className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-zinc-500"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => act('revision', revisionNotes)}
-              disabled={loading}
-              className="rounded-md bg-red-900/50 border border-red-800 px-4 py-1.5 text-sm text-red-300 hover:bg-red-900/70 transition-colors disabled:opacity-50"
-            >
-              Confirmar revisão
-            </button>
-            <button onClick={() => setShowRevision(false)} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
-              Cancelar
-            </button>
+      {open && (
+        <div
+          className="px-5 pb-5 space-y-3"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          <div className="flex flex-wrap gap-2 pt-4">
+            {currentStatus === 'draft' && contentType !== 'story' &&
+              btnPrimary('Enviar para aprovação', () => act('pending_my_approval'))
+            }
+            {currentStatus === 'draft' && contentType === 'story' &&
+              btnPrimary('Enviar para o cliente', () => act('sent_to_client'))
+            }
+            {currentStatus === 'pending_my_approval' && (<>
+              {btnPrimary('Aprovar', () => act('approved_by_me'))}
+              {btnDanger('Pedir revisão', () => setShowRevision(v => !v))}
+            </>)}
+            {currentStatus === 'approved_by_me' &&
+              btnPrimary('Marcar como enviado ao cliente', () => act('sent_to_client'))
+            }
+            {currentStatus === 'sent_to_client' && (<>
+              {btnPrimary('Cliente aprovou', () => act('approved_by_client'))}
+              {btnDanger('Cliente pediu revisão', () => setShowRevision(v => !v))}
+            </>)}
+            {currentStatus === 'approved_by_client' &&
+              btnPrimary('Marcar como publicado', () => act('published'))
+            }
+            {currentStatus === 'revision' &&
+              btnPrimary('Enviar para aprovação', () => act('pending_my_approval'))
+            }
+            {currentStatus !== 'draft' && currentStatus !== 'published' &&
+              btnSecondary('Voltar para rascunho', () => act('draft'))
+            }
           </div>
+
+          {showRevision && (
+            <div className="space-y-2 pt-1">
+              <textarea
+                value={revisionNotes}
+                onChange={e => setRevisionNotes(e.target.value)}
+                placeholder="Descreva o que precisa ser revisado..."
+                rows={3}
+                className="w-full rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none resize-none bg-white/5 border border-white/10"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => act('revision', revisionNotes)}
+                  disabled={loading}
+                  className="rounded-full px-5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50"
+                  style={{
+                    backgroundColor: 'rgba(239,68,68,0.15)',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    color: '#f87171',
+                  }}
+                >
+                  Confirmar revisão
+                </button>
+                <button
+                  onClick={() => setShowRevision(false)}
+                  className="text-sm text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

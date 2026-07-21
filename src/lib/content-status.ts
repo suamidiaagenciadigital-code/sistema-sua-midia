@@ -23,7 +23,7 @@ export const STATUS_COLOR: Record<ContentStatus, string> = {
   approved_by_me: 'bg-blue-900/50 text-blue-300 border-blue-700',
   sent_to_client: 'bg-orange-900/50 text-orange-300 border-orange-700',
   approved_by_client: 'bg-green-900/50 text-green-300 border-green-700',
-  published: 'bg-emerald-900/60 text-emerald-200 border-emerald-700',
+  published: 'bg-sky-900/50 text-sky-300 border-sky-700',
   revision: 'bg-red-900/50 text-red-300 border-red-700',
 }
 
@@ -33,7 +33,7 @@ export const STATUS_DOT: Record<ContentStatus, string> = {
   approved_by_me: 'bg-blue-400',
   sent_to_client: 'bg-orange-400',
   approved_by_client: 'bg-green-400',
-  published: 'bg-emerald-400',
+  published: 'bg-sky-400',
   revision: 'bg-red-400',
 }
 

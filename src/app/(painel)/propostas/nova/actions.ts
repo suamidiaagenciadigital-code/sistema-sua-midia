@@ -43,6 +43,29 @@ export async function createProposalAction(formData: FormData) {
   redirect(`/propostas/preview/${data.id}`)
 }
 
+export async function updateProposalAction(id: string, formData: FormData) {
+  const supabase = createServiceClient()
+
+  const client_name         = formData.get('client_name') as string
+  const service_title       = formData.get('service_title') as string
+  const service_description = formData.get('service_description') as string
+  const monthly_value       = parseFloat((formData.get('monthly_value') as string).replace(',', '.'))
+  const whatsapp            = formData.get('whatsapp') as string
+  const email               = formData.get('email') as string
+  const valid_days          = parseInt(formData.get('valid_days') as string) || 15
+  const deliverables        = JSON.parse((formData.get('deliverables_json') as string) || '[]')
+  const avulsos             = JSON.parse((formData.get('avulsos_json') as string) || '[]')
+
+  const { error } = await supabase
+    .from('proposals')
+    .update({ client_name, service_title, service_description, monthly_value, whatsapp, email, valid_days, deliverables, avulsos })
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+
+  redirect(`/propostas/preview/${id}`)
+}
+
 export async function updateProposalStatusAction(id: string, status: 'active' | 'expired' | 'closed') {
   const supabase = createServiceClient()
   await supabase.from('proposals').update({ status }).eq('id', id)

@@ -26,7 +26,7 @@ export default function PortalNav({ clientName, active }: { clientName: string; 
         {/* Logo + nome */}
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logotipo-2023 (horizontal) - branco.png" alt="Sua Mídia" className="h-7" />
+          <img src="/logo.png" alt="Sua Mídia" className="h-7" />
           <span className="text-slate-600 text-xs">|</span>
           <p className="text-slate-400 text-xs">{clientName}</p>
         </div>

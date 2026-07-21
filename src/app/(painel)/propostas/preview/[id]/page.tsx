@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ExternalLink, Download, ArrowLeft, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { deleteProposalAction, updateProposalStatusAction } from '../../nova/actions'
+import { CopyButton } from './copy-button'
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL
   ?? (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : 'https://sistema.suamidia.com.br')
@@ -65,12 +66,7 @@ export default async function PropostaPreviewPage({ params }: Props) {
         <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide">Link da proposta</p>
         <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5">
           <span className="text-zinc-300 text-sm flex-1 truncate">{onlineUrl}</span>
-          <button
-            onClick={() => navigator.clipboard?.writeText(onlineUrl)}
-            className="text-xs text-blue-400 hover:text-blue-300 flex-shrink-0"
-          >
-            Copiar
-          </button>
+          <CopyButton text={onlineUrl} />
         </div>
         <div className="flex gap-2">
           <a
@@ -92,6 +88,13 @@ export default async function PropostaPreviewPage({ params }: Props) {
 
       {/* Ações */}
       <div className="flex gap-2 flex-wrap">
+        <Link
+          href={`/propostas/editar/${id}`}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-colors"
+          style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}
+        >
+          Editar proposta
+        </Link>
         <Link
           href={`/propostas/nova`}
           className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm border border-zinc-700 hover:border-zinc-500 text-zinc-400 hover:text-white transition-colors"

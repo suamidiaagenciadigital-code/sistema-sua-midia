@@ -231,7 +231,7 @@ function PreviewPanel({
             /* Idêntico ao carrossel, só muda aspectRatio para 9/16 e detecta vídeo */
             <div>
               <div className="w-full bg-black" style={{ aspectRatio: '9/16' }}>
-                {storyUrls[activeSlide]?.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(storyUrls[activeSlide] ?? '') ? (
+                {/\.(mp4|mov|webm|m4v)(\?|$)/i.test(storyUrls[activeSlide] ?? '') ? (
                   <video
                     key={storyUrls[activeSlide]}
                     src={storyUrls[activeSlide]}
@@ -677,21 +677,9 @@ export function ContentEditForm({
                     rows={3}
                     value={mediaUrlsText}
                     onChange={e => { setMediaUrlsText(e.target.value); setImageUrl(e.target.value.split('\n')[0]?.trim() ?? '') }}
-                    onBlur={e => rehostMediaUrlsInTextarea(e.target.value)}
-                    onPaste={e => {
-                      const pasted = e.clipboardData.getData('text')
-                      if (/drive\.google\.com/.test(pasted)) setTimeout(() => rehostMediaUrlsInTextarea(pasted), 100)
-                    }}
-                    placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                    placeholder={'https://supabase.co/storage/.../imagem1.jpg\nhttps://supabase.co/storage/.../imagem2.jpg'}
                     className={base + ' resize-none'}
                   />
-                  {rehostingMedia && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
-                      <span className="text-xs text-blue-400 flex items-center gap-1.5">
-                        <Loader2 className="h-3 w-3 animate-spin" /> Hospedando no Supabase...
-                      </span>
-                    </div>
-                  )}
                 </div>
                 {/* Upload direto do computador para Story */}
                 <StoryUploadButton
@@ -703,7 +691,7 @@ export function ContentEditForm({
                   }}
                 />
                 <input type="hidden" name="generated_image_url" value={imageUrl} />
-                <p className="text-xs text-slate-600">Cole links do Drive (são transferidos automaticamente) ou suba arquivos do computador.</p>
+                <p className="text-xs text-slate-600">Cole os links diretos das mídias ou suba arquivos do computador.</p>
               </div>
             ) : (
               <>
@@ -747,23 +735,11 @@ export function ContentEditForm({
                         rows={5}
                         value={mediaUrlsText}
                         onChange={e => setMediaUrlsText(e.target.value)}
-                        onBlur={e => rehostMediaUrlsInTextarea(e.target.value)}
-                        onPaste={e => {
-                          const pasted = e.clipboardData.getData('text')
-                          if (/drive\.google\.com/.test(pasted)) setTimeout(() => rehostMediaUrlsInTextarea(pasted), 100)
-                        }}
-                        placeholder={'https://drive.google.com/file/d/ID1/view\nhttps://drive.google.com/file/d/ID2/view'}
+                        placeholder={'https://supabase.co/storage/.../slide1.jpg\nhttps://supabase.co/storage/.../slide2.jpg'}
                         className={base + ' resize-none'}
                       />
-                      {rehostingMedia && (
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-lg">
-                          <span className="text-xs text-blue-400 flex items-center gap-1.5">
-                            <Loader2 className="h-3 w-3 animate-spin" /> Hospedando no Supabase...
-                          </span>
-                        </div>
-                      )}
                     </div>
-                    <p className="text-xs text-slate-600">Cole um link por linha. Links do Drive são transferidos automaticamente.</p>
+                    <p className="text-xs text-slate-600">Cole os links diretos dos slides (um por linha).</p>
                   </div>
                 ) : (
                   <div className="space-y-1.5">

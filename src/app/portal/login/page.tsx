@@ -35,7 +35,7 @@ export default function PortalLoginPage() {
         {/* Logo */}
         <div className="text-center space-y-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logotipo-2023 (horizontal) - branco.png" alt="Sua Mídia" className="h-12 mx-auto" />
+          <img src="/logo.png" alt="Sua Mídia" className="h-12 mx-auto" />
           <div>
             <h1 className="text-white text-2xl font-bold">Portal do Cliente</h1>
             <p className="text-slate-400 text-sm">Agência Digital</p>
