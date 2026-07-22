@@ -6,6 +6,7 @@ export type ContentStatus =
   | 'approved_by_client'
   | 'published'
   | 'revision'
+  | 'scheduled'
 
 export const STATUS_LABEL: Record<ContentStatus, string> = {
   draft: 'Rascunho',
@@ -15,6 +16,7 @@ export const STATUS_LABEL: Record<ContentStatus, string> = {
   approved_by_client: 'Aprovado pelo cliente',
   published: 'Publicado',
   revision: 'Revisar',
+  scheduled: 'Agendado',
 }
 
 export const STATUS_COLOR: Record<ContentStatus, string> = {
@@ -25,6 +27,7 @@ export const STATUS_COLOR: Record<ContentStatus, string> = {
   approved_by_client: 'bg-green-900/50 text-green-300 border-green-700',
   published: 'bg-sky-900/50 text-sky-300 border-sky-700',
   revision: 'bg-red-900/50 text-red-300 border-red-700',
+  scheduled: 'bg-purple-900/50 text-purple-300 border-purple-700',
 }
 
 export const STATUS_DOT: Record<ContentStatus, string> = {
@@ -35,6 +38,7 @@ export const STATUS_DOT: Record<ContentStatus, string> = {
   approved_by_client: 'bg-green-400',
   published: 'bg-sky-400',
   revision: 'bg-red-400',
+  scheduled: 'bg-purple-400',
 }
 
 export const TYPE_LABEL: Record<string, string> = {

@@ -42,9 +42,9 @@ export async function POST(req: NextRequest) {
 
   await supabase.from('contents').update(update).eq('id', contentId)
 
-  // ── Auto-aprovar stories do mesmo dia ────────────────────────────────────
-  // Quando o cliente aprova um post do feed, os stories agendados para o mesmo
-  // dia são automaticamente aprovados (não precisam aparecer na tela do cliente).
+  // ── Auto-aprovar stories agendados do mesmo dia ──────────────────────────
+  // Stories com status 'scheduled' são aprovados automaticamente quando o
+  // cliente aprova qualquer post do mesmo dia.
   if (status === 'approved_by_client' && content.scheduled_date) {
     await supabase
       .from('contents')
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       .eq('client_id', content.client_id)
       .eq('type', 'story')
       .eq('scheduled_date', content.scheduled_date)
-      .eq('status', 'sent_to_client')
+      .eq('status', 'scheduled')
   }
 
   // ── Acionar n8n para publicar no Meta ───────────────────────────────────

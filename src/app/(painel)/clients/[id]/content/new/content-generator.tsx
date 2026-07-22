@@ -575,7 +575,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     }
   }
 
-  const save = async (status: 'draft' | 'pending_my_approval' | 'approved_by_client' | 'sent_to_client' = 'draft') => {
+  const save = async (status: 'draft' | 'pending_my_approval' | 'approved_by_client' | 'sent_to_client' | 'scheduled' = 'draft') => {
     if (!edited) return
     if (!edited.title?.trim()) {
       setError('Preencha o título antes de salvar.')
@@ -972,7 +972,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
               >
                 {type === 'story' ? (<>
                   <button
-                    onClick={() => save('approved_by_client')}
+                    onClick={() => save('scheduled')}
                     disabled={saving || saved}
                     className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all disabled:opacity-60 ${saved ? '' : 'hover:opacity-90'}`}
                     style={{ background: saved ? 'linear-gradient(to right, #059669, #10b981)' : 'linear-gradient(to right, #2B80FF, #A855F7)' }}

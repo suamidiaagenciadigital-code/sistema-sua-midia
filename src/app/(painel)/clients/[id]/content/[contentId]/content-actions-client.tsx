@@ -93,8 +93,11 @@ export function ContentStatusActions({ clientId, contentId, currentStatus, conte
             {currentStatus === 'draft' && contentType !== 'story' &&
               btnPrimary('Enviar para aprovação', () => act('pending_my_approval'))
             }
-            {currentStatus === 'draft' && contentType === 'story' &&
+            {(currentStatus === 'draft' || currentStatus === 'scheduled') && contentType === 'story' &&
               btnPrimary('Enviar para o cliente', () => act('sent_to_client'))
+            }
+            {currentStatus === 'scheduled' && contentType === 'story' &&
+              btnSecondary('Voltar para rascunho', () => act('draft'))
             }
             {currentStatus === 'pending_my_approval' && (<>
               {btnPrimary('Aprovar', () => act('approved_by_me'))}
@@ -113,7 +116,7 @@ export function ContentStatusActions({ clientId, contentId, currentStatus, conte
             {currentStatus === 'revision' &&
               btnPrimary('Enviar para aprovação', () => act('pending_my_approval'))
             }
-            {currentStatus !== 'draft' && currentStatus !== 'published' &&
+            {currentStatus !== 'draft' && currentStatus !== 'published' && currentStatus !== 'scheduled' &&
               btnSecondary('Voltar para rascunho', () => act('draft'))
             }
           </div>
