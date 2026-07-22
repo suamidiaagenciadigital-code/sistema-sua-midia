@@ -124,7 +124,7 @@ export default async function PublicApprovalPage({ params }: Props) {
   // Aprovados: ordem decrescente por data agendada (mais recente primeiro)
   // Limitado aos 10 mais recentes para não sobrecarregar o mobile
   const approved = (contents ?? [])
-    .filter(c => c.status === 'approved_by_client' || c.status === 'published')
+    .filter(c => (c.status === 'approved_by_client' || c.status === 'published') && c.type !== 'story')
     .sort((a, b) => {
       const da = a.scheduled_date ?? ''
       const db = b.scheduled_date ?? ''
