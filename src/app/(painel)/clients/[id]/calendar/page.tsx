@@ -21,6 +21,7 @@ const STATUS_BADGE_STYLE: Record<ContentStatus, React.CSSProperties> = {
   approved_by_client:  { backgroundColor: 'rgba(20,83,45,0.3)',  color: '#4ade80' },
   published:           { backgroundColor: 'rgba(12,74,110,0.4)',  color: '#38bdf8' },
   revision:            { backgroundColor: 'rgba(127,29,29,0.3)', color: '#f87171' },
+  scheduled:           { backgroundColor: 'rgba(88,28,135,0.3)', color: '#c084fc' },
 }
 
 // Stats card definitions
