@@ -170,6 +170,9 @@ export default async function PublicApprovalPage({ params }: Props) {
             {pending.map((c, i) => {
               const isReel = c.type === 'reel'
               const isCarousel = c.type === 'carrossel' && c.media_urls && c.media_urls.length > 0
+              const isStory = c.type === 'story'
+              const storyUrl = isStory ? (c.media_urls?.[0] ?? c.generated_image_url ?? null) : null
+              const isStoryVideo = storyUrl ? /\.(mp4|mov|webm|m4v)(\?|$)/i.test(storyUrl) : false
               const singleUrl = c.generated_image_url ?? null
 
               return (
@@ -193,6 +196,23 @@ export default async function PublicApprovalPage({ params }: Props) {
                   {/* Criativo */}
                   {isCarousel ? (
                     <MediaCarousel urls={c.media_urls!} />
+                  ) : isStory && storyUrl ? (
+                    <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
+                      {isStoryVideo ? (
+                        <video
+                          src={storyUrl}
+                          controls
+                          playsInline
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                      ) : (
+                        <img
+                          src={storyUrl}
+                          alt={c.title}
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
+                    </div>
                   ) : isReel && singleUrl ? (
                     <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                       {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
@@ -299,6 +319,9 @@ export default async function PublicApprovalPage({ params }: Props) {
                 {approved.map((c, i) => {
                   const isReel = c.type === 'reel'
                   const isCarousel = c.type === 'carrossel' && c.media_urls && c.media_urls.length > 0
+                  const isStoryA = c.type === 'story'
+                  const storyUrlA = isStoryA ? (c.media_urls?.[0] ?? c.generated_image_url ?? null) : null
+                  const isStoryVideoA = storyUrlA ? /\.(mp4|mov|webm|m4v)(\?|$)/i.test(storyUrlA) : false
                   const singleUrl = c.generated_image_url ?? null
 
                   return (
@@ -327,6 +350,23 @@ export default async function PublicApprovalPage({ params }: Props) {
                       {/* Criativo */}
                       {isCarousel ? (
                         <MediaCarousel urls={c.media_urls!} />
+                      ) : isStoryA && storyUrlA ? (
+                        <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
+                          {isStoryVideoA ? (
+                            <video
+                              src={storyUrlA}
+                              controls
+                              playsInline
+                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          ) : (
+                            <img
+                              src={storyUrlA}
+                              alt={c.title}
+                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          )}
+                        </div>
                       ) : isReel && singleUrl ? (
                         <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                           {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
