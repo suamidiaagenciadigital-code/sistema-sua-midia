@@ -575,7 +575,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     }
   }
 
-  const save = async (status: 'draft' | 'pending_my_approval' = 'draft') => {
+  const save = async (status: 'draft' | 'pending_my_approval' | 'approved_by_client' | 'sent_to_client' = 'draft') => {
     if (!edited) return
     if (!edited.title?.trim()) {
       setError('Preencha o título antes de salvar.')
@@ -594,6 +594,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
         scheduled_date: scheduledDate || null,
         scheduled_time: scheduledDate ? scheduledTime : null,
         status,
+        requires_client_approval: status === 'sent_to_client',
         ...edited,
         generated_image_url: type !== 'carrossel' && creativeUrl.trim() ? creativeUrl.trim() : null,
         media_urls: mediaUrls && mediaUrls.length > 0 ? mediaUrls : null,
@@ -969,34 +970,53 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                 className="flex flex-wrap items-center gap-3 pt-4"
                 style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
               >
-                <button
-                  onClick={() => save('pending_my_approval')}
-                  disabled={saving || saved}
-                  className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all disabled:opacity-60 ${
-                    saved ? '' : 'hover:opacity-90'
-                  }`}
-                  style={{
-                    background: saved
-                      ? 'linear-gradient(to right, #059669, #10b981)'
-                      : 'linear-gradient(to right, #2B80FF, #A855F7)',
-                  }}
-                >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Enviar para aprovação'}
-                </button>
-                <button
-                  onClick={() => save('draft')}
-                  disabled={saving || saved}
-                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 hover:text-white"
-                  style={{
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                    color: '#94a3b8',
-                  }}
-                >
-                  <Save className="h-4 w-4" />
-                  Salvar rascunho
-                </button>
+                {type === 'story' ? (<>
+                  <button
+                    onClick={() => save('approved_by_client')}
+                    disabled={saving || saved}
+                    className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all disabled:opacity-60 ${saved ? '' : 'hover:opacity-90'}`}
+                    style={{ background: saved ? 'linear-gradient(to right, #059669, #10b981)' : 'linear-gradient(to right, #2B80FF, #A855F7)' }}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar story'}
+                  </button>
+                  <button
+                    onClick={() => save('sent_to_client')}
+                    disabled={saving || saved}
+                    className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 hover:text-white"
+                    style={{ border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)', color: '#94a3b8' }}
+                  >
+                    <Save className="h-4 w-4" />
+                    Enviar para o cliente
+                  </button>
+                  <button
+                    onClick={() => save('draft')}
+                    disabled={saving || saved}
+                    className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 hover:text-white"
+                    style={{ border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)', color: '#94a3b8' }}
+                  >
+                    Salvar rascunho
+                  </button>
+                </>) : (<>
+                  <button
+                    onClick={() => save('pending_my_approval')}
+                    disabled={saving || saved}
+                    className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all disabled:opacity-60 ${saved ? '' : 'hover:opacity-90'}`}
+                    style={{ background: saved ? 'linear-gradient(to right, #059669, #10b981)' : 'linear-gradient(to right, #2B80FF, #A855F7)' }}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Enviar para aprovação'}
+                  </button>
+                  <button
+                    onClick={() => save('draft')}
+                    disabled={saving || saved}
+                    className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition-colors disabled:opacity-60 hover:text-white"
+                    style={{ border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)', color: '#94a3b8' }}
+                  >
+                    <Save className="h-4 w-4" />
+                    Salvar rascunho
+                  </button>
+                </>)}
               </div>
             </div>
           )}

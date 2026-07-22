@@ -108,14 +108,15 @@ export default async function PublicApprovalPage({ params }: Props) {
 
   const { data: contents } = await supabase
     .from('contents')
-    .select('id, title, type, caption, script, cta, scheduled_date, created_at, status, revision_notes, generated_image_url, media_urls')
+    .select('id, title, type, caption, script, cta, scheduled_date, created_at, status, revision_notes, generated_image_url, media_urls, requires_client_approval')
     .eq('client_id', client.id)
     .in('status', ['sent_to_client', 'approved_by_client', 'published'])
     .order('created_at', { ascending: false })
 
   // Pendentes: ordem crescente por data agendada (mais antigo primeiro)
+  // Stories só aparecem se requires_client_approval = true
   const pending = (contents ?? [])
-    .filter(c => c.status === 'sent_to_client')
+    .filter(c => c.status === 'sent_to_client' && (c.type !== 'story' || c.requires_client_approval))
     .sort((a, b) => {
       const da = a.scheduled_date ?? ''
       const db = b.scheduled_date ?? ''

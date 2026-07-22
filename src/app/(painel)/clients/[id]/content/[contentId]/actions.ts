@@ -70,6 +70,7 @@ export async function updateStatusAction(clientId: string, contentId: string, st
 
   const update: Record<string, unknown> = { status }
   if (revisionNotes) update.revision_notes = revisionNotes
+  if (status === 'sent_to_client') update.requires_client_approval = true
   if (status === 'revision') {
     const { data } = await supabase.from('contents').select('revision_count').eq('id', contentId).single()
     update.revision_count = (data?.revision_count ?? 0) + 1
