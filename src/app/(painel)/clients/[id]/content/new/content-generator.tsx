@@ -999,13 +999,13 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
                   </button>
                 </>) : (<>
                   <button
-                    onClick={() => save('pending_my_approval')}
+                    onClick={() => save('sent_to_client')}
                     disabled={saving || saved}
                     className={`flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all disabled:opacity-60 ${saved ? '' : 'hover:opacity-90'}`}
                     style={{ background: saved ? 'linear-gradient(to right, #059669, #10b981)' : 'linear-gradient(to right, #2B80FF, #A855F7)' }}
                   >
                     {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Enviar para aprovação'}
+                    {saved ? '✓ Salvo! Redirecionando...' : saving ? 'Salvando...' : 'Salvar e enviar para o cliente'}
                   </button>
                   <button
                     onClick={() => save('draft')}
