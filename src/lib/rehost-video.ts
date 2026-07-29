@@ -43,12 +43,14 @@ export async function rehostIfDriveVideo(
     const headResp = await fetch(downloadUrl, { method: 'HEAD' })
     const contentType = headResp.headers.get('content-type') ?? ''
 
-    if (!contentType.startsWith('video/')) {
-      // Não é vídeo — não precisa re-hospedar
+    const isMedia =
+      contentType.startsWith('video/') || contentType.startsWith('image/')
+    if (!isMedia) {
+      // Não é mídia — não precisa re-hospedar
       return url
     }
 
-    // Baixar o vídeo
+    // Baixar o arquivo
     const videoResp = await fetch(downloadUrl)
     if (!videoResp.ok) return url
 
