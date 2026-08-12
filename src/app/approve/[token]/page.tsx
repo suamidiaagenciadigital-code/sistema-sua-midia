@@ -283,7 +283,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                       {c.caption && (
                         <WhatsAppShareButton
                           caption={c.caption}
-                          imageUrl={getDownloadUrl(singleUrl)}
+                          imageUrl={resolveImageUrl(singleUrl)}
                         />
                       )}
                     </div>
@@ -403,7 +403,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                           </div>
                           <WhatsAppShareButton
                             caption={c.caption}
-                            imageUrl={getDownloadUrl(singleUrl)}
+                            imageUrl={resolveImageUrl(singleUrl)}
                           />
                         </div>
                       )}
