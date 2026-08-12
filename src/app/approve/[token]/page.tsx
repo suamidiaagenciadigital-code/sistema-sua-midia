@@ -26,12 +26,10 @@ function getDriveEmbedUrl(url: string | null): string | null {
   return url
 }
 
-// Gera URL de download para Google Drive ou URL direta
+// Gera URL de download via rota interna (força download direto no celular)
 function getDownloadUrl(url: string | null): string | null {
   if (!url) return null
-  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/)
-  if (driveMatch) return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`
-  return url
+  return `/api/download?url=${encodeURIComponent(url)}`
 }
 
 function DownloadButton({ urls, label }: { urls: string[]; label?: string }) {
@@ -42,8 +40,7 @@ function DownloadButton({ urls, label }: { urls: string[]; label?: string }) {
     return (
       <a
         href={dl}
-        target="_blank"
-        rel="noreferrer"
+        download
         className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 text-sm transition-colors"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,8 +62,7 @@ function DownloadButton({ urls, label }: { urls: string[]; label?: string }) {
             <a
               key={i}
               href={dl}
-              target="_blank"
-              rel="noreferrer"
+              download
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 text-xs transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
