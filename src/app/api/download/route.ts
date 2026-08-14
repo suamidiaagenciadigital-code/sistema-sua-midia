@@ -4,11 +4,11 @@ export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url')
   if (!url) return NextResponse.json({ error: 'url obrigatória' }, { status: 400 })
 
-  // Converter Drive para URL direta de download
+  // Converter Drive para URL direta sem necessidade de autenticação
   let fetchUrl = url
   const driveMatch = url.match(/drive\.google\.com\/(?:file\/d\/|uc\?.*id=)([^/?&]+)/)
   if (driveMatch) {
-    fetchUrl = `https://drive.usercontent.google.com/download?id=${driveMatch[1]}&export=download&confirm=t`
+    fetchUrl = `https://lh3.googleusercontent.com/d/${driveMatch[1]}`
   }
 
   try {
