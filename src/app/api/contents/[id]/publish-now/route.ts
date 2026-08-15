@@ -155,7 +155,7 @@ export async function POST(
   // Parsear media_urls: override tem prioridade (texto com linhas) ou banco (array)
   let mediaUrls: string[] = []
   if (overrideMediaUrls) {
-    mediaUrls = overrideMediaUrls.split('\n').map((u: string) => u.trim()).filter(Boolean)
+    mediaUrls = overrideMediaUrls.split(/[\n,]+/).map((u: string) => u.trim()).filter(Boolean)
   } else if (Array.isArray(content.media_urls)) {
     mediaUrls = (content.media_urls as string[]).filter(Boolean)
   }

@@ -13,7 +13,7 @@ export async function updateContentAction(clientId: string, contentId: string, f
   // Carousel/Story: parse textarea de URLs (uma por linha)
   const mediaUrlsText = formData.get('media_urls_text') as string | null
   const rawMediaUrls = mediaUrlsText
-    ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
+    ? mediaUrlsText.split(/[\n,]+/).map(u => u.trim()).filter(Boolean)
     : null
 
   // Re-hospedar vídeos do Drive no Supabase Storage

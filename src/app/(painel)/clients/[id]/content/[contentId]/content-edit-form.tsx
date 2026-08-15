@@ -206,12 +206,12 @@ function PreviewPanel({
   const isStory = type === 'story'
   // URLs do carrossel — exatamente igual ao carrossel
   const mediaUrls = isCarousel
-    ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
+    ? mediaUrlsText.split(/[\n,]+/).map(u => u.trim()).filter(Boolean)
     : []
   // URLs do story — mesma lógica do carrossel + fallback para imageUrl
   const storyUrls = isStory
     ? (() => {
-        const parsed = mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
+        const parsed = mediaUrlsText.split(/[\n,]+/).map(u => u.trim()).filter(Boolean)
         return parsed.length > 0 ? parsed : (imageUrl.trim() ? [imageUrl] : [])
       })()
     : []
@@ -570,7 +570,7 @@ export function ContentEditForm({
 
   // Rehosta todas as URLs do Drive no textarea para Supabase
   async function rehostMediaUrlsInTextarea(text: string) {
-    const lines = text.split('\n').map(u => u.trim()).filter(Boolean)
+    const lines = text.split(/[\n,]+/).map(u => u.trim()).filter(Boolean)
     const driveLines = lines.filter(u => /drive\.google\.com/.test(u))
     if (driveLines.length === 0) return
 

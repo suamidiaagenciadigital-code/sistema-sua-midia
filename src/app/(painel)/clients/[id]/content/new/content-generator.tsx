@@ -210,7 +210,7 @@ function PreviewPanel({
   const isCarousel = type === 'carrossel'
   const isStory = type === 'story'
   const mediaUrls = isCarousel
-    ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
+    ? mediaUrlsText.split(/[\n,]+/).map(u => u.trim()).filter(Boolean)
     : []
 
   const [activeSlide, setActiveSlide] = useState(0)
@@ -585,7 +585,7 @@ export default function ContentGenerator({ clientId, clientName }: { clientId: s
     setError('')
     try {
       const mediaUrls = (type === 'carrossel' || type === 'story')
-        ? mediaUrlsText.split('\n').map(u => u.trim()).filter(Boolean)
+        ? mediaUrlsText.split(/[\n,]+/).map(u => u.trim()).filter(Boolean)
         : null
 
       const payload = {
