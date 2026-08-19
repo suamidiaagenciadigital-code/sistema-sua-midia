@@ -204,11 +204,12 @@ nav img.logo{height:32px;}
   .hero-ctas{flex-direction:column;align-items:stretch;gap:12px;}
   .btn-primary,.btn-secondary{justify-content:center;padding:14px 20px;font-size:15px;}
   .hero-validity{font-size:11px;padding:8px 16px;line-height:1.4;}
-  .stats-bar{padding:16px 8px;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;}
-  .stat{padding:14px 6px;min-width:0;overflow:hidden;}
+  .stats-bar{padding:8px 24px;display:flex;flex-direction:column;gap:0;overflow:visible;}
+  .stat{flex:none;width:100%;padding:14px 0;text-align:left;display:flex;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.06);}
+  .stat:last-child{border-bottom:none;}
   .stat+.stat::before{display:none;}
-  .stat-n{font-size:clamp(0.9rem,5vw,1.4rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .stat-l{font-size:10px;}
+  .stat-n{font-size:1.5rem;min-width:80px;flex-shrink:0;}
+  .stat-l{font-size:12px;}
   section{padding:72px 20px;}
   #contexto{padding:60px 20px;}
   .context-card{padding:28px 24px;}
