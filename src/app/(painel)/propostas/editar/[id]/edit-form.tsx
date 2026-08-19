@@ -72,6 +72,11 @@ export function EditPropostaForm({ proposal }: Props) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    const emptyTitle = deliverables.findIndex(d => !d.title.trim())
+    if (emptyTitle !== -1) {
+      alert(`O entregável #${emptyTitle + 1} está sem título. Preencha antes de salvar.`)
+      return
+    }
     const avulsosFormatted = avulsos
       .map(c => ({ category: c.category, items: c.items.filter(it => it.name).map(it => ({ name: it.name, price: parseFloat(it.price) || 0 })) }))
       .filter(c => c.items.length > 0)

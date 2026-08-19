@@ -87,19 +87,22 @@ export function generateProposalHtml(data: ProposalData): string {
   const hasAvulsos = data.avulsos.length > 0
 
   // Deliverable cards
-  const delCards = data.deliverables.map((d, i) => `
+  const delCards = data.deliverables.map((d, i) => {
+    const title = d.title?.trim() || d.description?.split(' ').slice(0, 4).join(' ') || 'Entregável'
+    return `
       <div class="del-card rv${i > 0 ? ` d${Math.min(i, 5)}` : ''}">
         <div class="del-ico"><span style="font-size:20px;line-height:1;">${d.icon}</span></div>
         <div>
           <div class="del-num">${d.qty}</div>
-          <div class="del-t">${d.title}</div>
+          <div class="del-t">${title}</div>
         </div>
         <div class="del-b">${d.description}</div>
-      </div>`).join('')
+      </div>`
+  }).join('')
 
   // Plano list items
   const planoItems = [
-    ...data.deliverables.map(d => `${d.qty} de ${d.title}`),
+    ...data.deliverables.map(d => `${d.qty} de ${d.title?.trim() || d.description?.split(' ').slice(0, 4).join(' ') || 'Entregável'}`),
     'Copy + legenda estratégica em todas as publicações',
     'Aprovação prévia de todo conteúdo',
     'Relatório mensal de performance',
