@@ -204,10 +204,10 @@ nav img.logo{height:32px;}
   .hero-ctas{flex-direction:column;align-items:stretch;gap:12px;}
   .btn-primary,.btn-secondary{justify-content:center;padding:14px 20px;font-size:15px;}
   .hero-validity{font-size:11px;padding:8px 16px;line-height:1.4;}
-  .stats-bar{padding:20px 12px;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow-x:hidden;}
-  .stat{padding:14px 8px;min-width:0;text-align:center;}
+  .stats-bar{padding:16px 8px;display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;}
+  .stat{padding:14px 6px;min-width:0;overflow:hidden;}
   .stat+.stat::before{display:none;}
-  .stat-n{font-size:1.25rem;word-break:break-word;}
+  .stat-n{font-size:clamp(0.9rem,5vw,1.4rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .stat-l{font-size:10px;}
   section{padding:72px 20px;}
   #contexto{padding:60px 20px;}
