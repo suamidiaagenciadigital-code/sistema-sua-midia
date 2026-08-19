@@ -178,7 +178,7 @@ export default function NovaPropostaPage() {
               <div key={i} className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   <input value={d.icon} onChange={e => updateDeliverable(i, 'icon', e.target.value)} className={inputCls + ' w-10 text-center text-lg shrink-0'} placeholder="🎠" maxLength={4} />
-                  <input value={d.title} onChange={e => updateDeliverable(i, 'title', e.target.value)} className={inputCls + ' flex-1'} placeholder="Título" />
+                  <input value={d.title} onChange={e => updateDeliverable(i, 'title', e.target.value)} className={inputCls + ' flex-1'} placeholder="Título" style={{ color: 'white' }} />
                   <input value={d.qty} onChange={e => updateDeliverable(i, 'qty', e.target.value)} className={inputCls + ' w-20 shrink-0'} placeholder="4/mês" />
                   <button type="button" onClick={() => removeDeliverable(i)} className="h-9 w-9 shrink-0 flex items-center justify-center rounded-lg border border-zinc-700 text-zinc-600 hover:text-red-400 hover:border-red-900/50 transition-colors">
                     <Trash2 className="h-3.5 w-3.5" />
