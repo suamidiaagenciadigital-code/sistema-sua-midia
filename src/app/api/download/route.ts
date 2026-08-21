@@ -33,17 +33,39 @@ function candidateUrls(url: string): string[] {
   ]
 }
 
-function extFor(contentType: string): string {
-  if (contentType.includes('mp4')) return 'mp4'
-  if (contentType.includes('quicktime') || contentType.includes('mov')) return 'mov'
-  if (contentType.includes('webm')) return 'webm'
-  if (contentType.includes('x-m4v') || contentType.includes('m4v')) return 'm4v'
-  if (contentType.includes('png')) return 'png'
-  if (contentType.includes('webp')) return 'webp'
-  if (contentType.includes('gif')) return 'gif'
-  if (contentType.includes('jpeg') || contentType.includes('jpg')) return 'jpg'
-  if (contentType.startsWith('video/')) return 'mp4'
-  return 'jpg'
+const MIME_BY_EXT: Record<string, string> = {
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  m4v: 'video/x-m4v',
+  webm: 'video/webm',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+}
+
+// O Drive responde application/octet-stream, mas manda o nome real
+// em Content-Disposition — é dali que sai a extensão confiável.
+function extFromDisposition(disposition: string): string | null {
+  const name = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)?.[1]
+  const ext = name?.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase()
+  return ext && ext in MIME_BY_EXT ? ext : null
+}
+
+function extFromContentType(contentType: string): string | null {
+  const ct = contentType.toLowerCase()
+  if (ct.includes('quicktime')) return 'mov'
+  if (ct.includes('mp4')) return 'mp4'
+  if (ct.includes('webm')) return 'webm'
+  if (ct.includes('m4v')) return 'm4v'
+  if (ct.includes('png')) return 'png'
+  if (ct.includes('webp')) return 'webp'
+  if (ct.includes('gif')) return 'gif'
+  if (ct.includes('jpeg') || ct.includes('jpg')) return 'jpg'
+  if (ct.startsWith('video/')) return 'mp4'
+  if (ct.startsWith('image/')) return 'jpg'
+  return null
 }
 
 export async function GET(req: NextRequest) {
@@ -57,23 +79,28 @@ export async function GET(req: NextRequest) {
   try {
     for (const fetchUrl of candidateUrls(url)) {
       const resp = await fetch(fetchUrl, { redirect: 'follow' })
-      if (!resp.ok) continue
+      if (!resp.ok || !resp.body) continue
 
-      const contentType = resp.headers.get('content-type') ?? ''
+      const upstreamType = resp.headers.get('content-type') ?? ''
       // HTML = página de login/erro do Google: arquivo não está público
-      if (contentType.includes('text/html')) continue
+      if (upstreamType.includes('text/html')) continue
 
-      const buffer = await resp.arrayBuffer()
-      const ext = extFor(contentType)
-      const filename = `suamidia-${Date.now()}.${ext}`
+      const upstreamDisposition = resp.headers.get('content-disposition') ?? ''
+      const ext =
+        extFromDisposition(upstreamDisposition) ??
+        extFromContentType(upstreamType) ??
+        'jpg'
 
-      return new NextResponse(buffer, {
-        headers: {
-          'Content-Type': contentType || 'application/octet-stream',
-          'Content-Disposition': `attachment; filename="${filename}"`,
-          'Cache-Control': 'no-store',
-        },
-      })
+      const headers: Record<string, string> = {
+        'Content-Type': MIME_BY_EXT[ext] ?? 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="suamidia-${Date.now()}.${ext}"`,
+        'Cache-Control': 'no-store',
+      }
+      const length = resp.headers.get('content-length')
+      if (length) headers['Content-Length'] = length
+
+      // Repassa em streaming para não carregar o arquivo inteiro na memória
+      return new NextResponse(resp.body, { headers })
     }
 
     return NextResponse.json(
