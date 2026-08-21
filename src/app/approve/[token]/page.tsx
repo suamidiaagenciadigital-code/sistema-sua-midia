@@ -231,7 +231,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                         <DownloadAllButton urls={c.media_urls!} />
                       ) : (
                         <DownloadButton
-                          urls={[singleUrl!]}
+                          url={singleUrl!}
                           label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
                         />
                       )}
@@ -354,7 +354,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                                 <DownloadAllButton urls={c.media_urls!} />
                               ) : (
                                 <DownloadButton
-                                  urls={[singleUrl!]}
+                                  url={singleUrl!}
                                   label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
                                 />
                               )
