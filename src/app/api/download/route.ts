@@ -12,13 +12,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const resp = await fetch(fetchUrl)
+    const resp = await fetch(fetchUrl, { redirect: 'follow' })
     if (!resp.ok) return NextResponse.json({ error: 'Falha ao baixar arquivo' }, { status: 502 })
 
     const contentType = resp.headers.get('content-type') ?? 'application/octet-stream'
+
+    // Se o servidor retornou HTML (ex: página de login do Google), o arquivo não está público
+    if (contentType.includes('text/html')) {
+      return NextResponse.json(
+        { error: 'Arquivo não está público no Google Drive. Compartilhe como "qualquer pessoa com o link".' },
+        { status: 403 },
+      )
+    }
+
     const buffer = await resp.arrayBuffer()
 
-    // Detectar extensão pelo content-type
     const ext = contentType.includes('png') ? 'png'
       : contentType.includes('webp') ? 'webp'
       : contentType.includes('gif') ? 'gif'

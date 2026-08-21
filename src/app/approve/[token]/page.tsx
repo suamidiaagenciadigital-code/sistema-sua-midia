@@ -5,6 +5,7 @@ import ApprovalActions from './approval-actions'
 import { MediaCarousel } from './media-carousel'
 import { CopyCaptionButton } from './copy-caption-button'
 import { WhatsAppShareButton } from './whatsapp-share-button'
+import { DownloadAllButton } from './download-all-button'
 
 interface Props {
   params: Promise<{ token: string }>
@@ -276,10 +277,14 @@ export default async function PublicApprovalPage({ params }: Props) {
                   {/* Download + WhatsApp */}
                   {(singleUrl || (c.media_urls && c.media_urls.length > 0)) && (
                     <div className="px-4 pb-2 space-y-2">
-                      <DownloadButton
-                        urls={isCarousel ? c.media_urls! : [singleUrl!]}
-                        label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
-                      />
+                      {isCarousel ? (
+                        <DownloadAllButton urls={c.media_urls!} />
+                      ) : (
+                        <DownloadButton
+                          urls={[singleUrl!]}
+                          label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
+                        />
+                      )}
                       {c.caption && (
                         <WhatsAppShareButton
                           caption={c.caption}
@@ -395,10 +400,14 @@ export default async function PublicApprovalPage({ params }: Props) {
                           <div className="flex gap-2 pt-1 flex-wrap">
                             <CopyCaptionButton caption={c.caption} />
                             {(singleUrl || (c.media_urls?.length ?? 0) > 0) && (
-                              <DownloadButton
-                                urls={isCarousel ? c.media_urls! : [singleUrl!]}
-                                label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
-                              />
+                              isCarousel ? (
+                                <DownloadAllButton urls={c.media_urls!} />
+                              ) : (
+                                <DownloadButton
+                                  urls={[singleUrl!]}
+                                  label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
+                                />
+                              )
                             )}
                           </div>
                           <WhatsAppShareButton
