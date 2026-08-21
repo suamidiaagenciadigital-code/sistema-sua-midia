@@ -8,10 +8,29 @@ const DownloadIcon = () => (
   </svg>
 )
 
-async function downloadBlob(url: string, filename: string) {
+// Extensão vem do tipo real do arquivo, não do nome de origem
+function extFromType(type: string): string {
+  if (type.includes('mp4')) return 'mp4'
+  if (type.includes('quicktime') || type.includes('mov')) return 'mov'
+  if (type.includes('webm')) return 'webm'
+  if (type.includes('m4v')) return 'm4v'
+  if (type.includes('png')) return 'png'
+  if (type.includes('webp')) return 'webp'
+  if (type.includes('gif')) return 'gif'
+  if (type.startsWith('video/')) return 'mp4'
+  return 'jpg'
+}
+
+async function downloadBlob(url: string, baseName: string) {
   const resp = await fetch(`/api/download?url=${encodeURIComponent(url)}`, { credentials: 'include' })
   if (!resp.ok) throw new Error('Falha ao baixar')
+
+  // Extensão vem do servidor (tipo real do arquivo); o nome mantém a numeração local
+  const disposition = resp.headers.get('content-disposition') ?? ''
+  const serverExt = disposition.match(/filename="?[^";]*\.([a-z0-9]+)"?/i)?.[1]
   const blob = await resp.blob()
+  const filename = `${baseName}.${serverExt ?? extFromType(blob.type)}`
+
   const blobUrl = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = blobUrl
@@ -33,7 +52,7 @@ export function DownloadButton({ url, label }: SingleProps) {
   async function handle() {
     setState('loading')
     try {
-      await downloadBlob(url, `suamidia-${Date.now()}.jpg`)
+      await downloadBlob(url, `suamidia-${Date.now()}`)
       setState('done')
       setTimeout(() => setState('idle'), 3000)
     } catch {
@@ -69,7 +88,7 @@ export function DownloadAllButton({ urls }: AllProps) {
     setState('loading')
     for (let i = 0; i < urls.length; i++) {
       try {
-        await downloadBlob(urls[i], `suamidia-slide-${i + 1}.jpg`)
+        await downloadBlob(urls[i], `suamidia-slide-${i + 1}`)
       } catch { /* continua mesmo se um falhar */ }
       if (i < urls.length - 1) await new Promise(r => setTimeout(r, 800))
     }
