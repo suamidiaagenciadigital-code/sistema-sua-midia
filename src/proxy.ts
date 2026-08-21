@@ -35,6 +35,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/propostas/') ||
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/public-approval') ||
+    pathname.startsWith('/api/download') ||
     pathname.startsWith('/api/cron/')
   ) {
     return supabaseResponse

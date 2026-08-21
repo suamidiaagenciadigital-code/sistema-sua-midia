@@ -1,8 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Rota é pública (ver src/proxy.ts): restringe hosts para não virar proxy aberto
+const ALLOWED_HOSTS = [
+  'drive.google.com',
+  'lh3.googleusercontent.com',
+  'drive.usercontent.google.com',
+]
+
+function isAllowedHost(rawUrl: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(rawUrl)
+    if (protocol !== 'https:') return false
+    return ALLOWED_HOSTS.includes(hostname) || hostname.endsWith('.supabase.co')
+  } catch {
+    return false
+  }
+}
+
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url')
   if (!url) return NextResponse.json({ error: 'url obrigatória' }, { status: 400 })
+
+  if (!isAllowedHost(url)) {
+    return NextResponse.json({ error: 'Origem não permitida' }, { status: 400 })
+  }
 
   // Converter Drive para URL direta sem necessidade de autenticação
   let fetchUrl = url
