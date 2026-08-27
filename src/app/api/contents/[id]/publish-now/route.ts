@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getMetaToken } from '@/lib/meta-token'
+import { cleanupAfterPublish } from '@/lib/cleanup-media'
 
 // Publicação pode demorar até 3 min aguardando processamento do vídeo no Instagram
 export const maxDuration = 300
@@ -68,7 +69,8 @@ async function rehostDriveVideoForPublish(
 
     const buffer = await videoResp.arrayBuffer()
     const ext = contentType.split('/')[1]?.split(';')[0]?.trim() ?? 'mp4'
-    const path = `${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    // ID do Drive no nome para permitir a limpeza pós-publicação
+    const path = `${clientId}/drive-${fileId}-${Date.now()}.${ext}`
 
     const { error } = await supabase.storage
       .from('media')
@@ -362,9 +364,18 @@ export async function POST(
 
   await supabase.from('contents').update(updateData).eq('id', contentId)
 
+  // Publicou em alguma rede: a cópia do vídeo no Supabase já cumpriu o papel.
+  // Se nada foi publicado, o arquivo fica para a próxima tentativa.
+  let cleaned = 0
+  if (fbPostId || igPostId) {
+    const { removed } = await cleanupAfterPublish(contentId, supabase)
+    cleaned = removed
+  }
+
   return NextResponse.json({
     ok: true,
     facebook: { post_id: fbPostId, error: fbError },
     instagram: { post_id: igPostId, error: igError },
+    media_liberada: cleaned,
   })
 }

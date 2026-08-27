@@ -58,7 +58,9 @@ export async function rehostIfDriveVideo(
 
     // Determinar extensão
     const ext = contentType.split('/')[1]?.split(';')[0]?.trim() ?? 'mp4'
-    const path = `${clientId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    // O ID do Drive vai no nome para que a limpeza pós-publicação consiga
+    // reconstruir a URL original — ver src/lib/cleanup-media.ts
+    const path = `${clientId}/drive-${fileId}-${Date.now()}.${ext}`
 
     // Upload para Supabase Storage
     const supabase = createServiceClient()
