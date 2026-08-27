@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getMetaToken } from '@/lib/meta-token'
 import { cleanupAfterPublish } from '@/lib/cleanup-media'
+import { findExistingRehost } from '@/lib/rehost-video'
 
 // Publicação pode demorar até 3 min aguardando processamento do vídeo no Instagram
 export const maxDuration = 300
@@ -59,6 +60,11 @@ async function rehostDriveVideoForPublish(
     const match = driveUrl.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([^/?&]+)/)
     if (!match) return driveUrl
     const fileId = match[1]
+
+    // Reaproveita cópia existente em vez de baixar e gravar de novo
+    const existing = await findExistingRehost(clientId, fileId, supabase)
+    if (existing) return existing
+
     const downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
 
     const videoResp = await fetch(downloadUrl)

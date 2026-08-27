@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { findExistingRehost } from '@/lib/rehost-video'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -27,6 +28,20 @@ export async function POST(req: NextRequest) {
   if (!match) return NextResponse.json({ error: 'Não foi possível extrair o ID do arquivo' }, { status: 400 })
 
   const fileId = match[1]
+
+  // Reaproveita cópia já existente do mesmo arquivo do Drive
+  const dbEarly = createServiceClient()
+  const existing = await findExistingRehost(clientId, fileId, dbEarly)
+  if (existing) {
+    const isVideo = /\.(mp4|mov|webm|m4v)$/i.test(existing)
+    return NextResponse.json({
+      url: existing,
+      contentType: isVideo ? 'video/mp4' : 'image/jpeg',
+      isVideo,
+      reused: true,
+    })
+  }
+
   const downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
 
   let fileResp: Response

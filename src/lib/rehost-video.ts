@@ -22,6 +22,35 @@ function isDriveUrl(url: string): boolean {
 }
 
 /**
+ * Procura uma cópia já existente do mesmo arquivo do Drive.
+ *
+ * O nome segue `drive-{fileId}-{timestamp}.{ext}`, então o ID identifica o
+ * arquivo de origem. Sem essa checagem, colar o mesmo link duas vezes gerava
+ * duas cópias de 40MB no bucket.
+ */
+export async function findExistingRehost(
+  clientId: string,
+  fileId: string,
+  supabase: ReturnType<typeof createServiceClient>,
+): Promise<string | null> {
+  try {
+    const { data } = await supabase.storage
+      .from('media')
+      .list(clientId, { limit: 100, search: `drive-${fileId}` })
+
+    const hit = data?.find((f) => f.name.startsWith(`drive-${fileId}-`))
+    if (!hit) return null
+
+    const { data: pub } = supabase.storage
+      .from('media')
+      .getPublicUrl(`${clientId}/${hit.name}`)
+    return pub.publicUrl
+  } catch {
+    return null
+  }
+}
+
+/**
  * Se a URL for do Google Drive e o arquivo for um vídeo,
  * faz o download e re-hospeda no Supabase Storage.
  * Retorna a URL pública do Supabase, ou a URL original em caso de falha.
@@ -36,6 +65,15 @@ export async function rehostIfDriveVideo(
   const fileId = extractDriveId(url)
   if (!fileId) return url
 
+  const supabaseEarly = createServiceClient()
+
+  // Já existe cópia deste arquivo? Evita baixar e gravar 40MB de novo.
+  const existing = await findExistingRehost(clientId, fileId, supabaseEarly)
+  if (existing) {
+    console.log('[rehost-video] Reaproveitando cópia existente:', existing)
+    return existing
+  }
+
   try {
     const downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
 
@@ -43,10 +81,10 @@ export async function rehostIfDriveVideo(
     const headResp = await fetch(downloadUrl, { method: 'HEAD' })
     const contentType = headResp.headers.get('content-type') ?? ''
 
-    const isMedia =
-      contentType.startsWith('video/') || contentType.startsWith('image/')
-    if (!isMedia) {
-      // Não é mídia — não precisa re-hospedar
+    // Só vídeo precisa de cópia: o Instagram não baixa vídeo do Drive, mas
+    // consome imagem via lh3.googleusercontent.com sem problema. Copiar
+    // imagem só ocupava storage à toa.
+    if (!contentType.startsWith('video/')) {
       return url
     }
 
@@ -63,7 +101,7 @@ export async function rehostIfDriveVideo(
     const path = `${clientId}/drive-${fileId}-${Date.now()}.${ext}`
 
     // Upload para Supabase Storage
-    const supabase = createServiceClient()
+    const supabase = supabaseEarly
     const { error: uploadError } = await supabase.storage
       .from('media')
       .upload(path, new Uint8Array(buffer), { contentType })
