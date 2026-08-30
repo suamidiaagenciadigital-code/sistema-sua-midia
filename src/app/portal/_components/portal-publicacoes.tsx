@@ -116,7 +116,7 @@ function ContentCard({ c }: { c: Content }) {
                 src={currentUrl}
                 controls
                 playsInline
-                preload="none"
+                preload="metadata"
                 className="w-full h-full object-contain"
               />
             )

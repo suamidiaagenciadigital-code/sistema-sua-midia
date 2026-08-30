@@ -237,7 +237,7 @@ function PreviewPanel({
                     src={storyUrls[activeSlide]}
                     controls
                     playsInline
-                    preload="none"
+                    preload="metadata"
                     style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                   />
                 ) : (
@@ -316,7 +316,7 @@ function PreviewPanel({
             ) : isReel && imageUrl.trim() ? (
               <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                 {imageUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(imageUrl) ? (
-                  <video src={imageUrl} controls playsInline preload="none"
+                  <video src={imageUrl} controls playsInline preload="metadata"
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }} />
                 ) : (
                   <iframe src={getDriveEmbedUrl(imageUrl)} allow="autoplay; fullscreen" allowFullScreen

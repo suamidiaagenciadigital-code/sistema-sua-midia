@@ -151,7 +151,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                           src={storyUrl}
                           controls
                           playsInline
-                          preload="none"
+                          preload="metadata"
                           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
                         />
                       ) : (
@@ -169,7 +169,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                           src={singleUrl}
                           controls
                           playsInline
-                          preload="none"
+                          preload="metadata"
                           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
                         />
                       ) : (
@@ -311,7 +311,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                               src={storyUrlA}
                               controls
                               playsInline
-                              preload="none"
+                              preload="metadata"
                               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
                             />
                           ) : (
@@ -329,7 +329,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                               src={singleUrl}
                               controls
                               playsInline
-                              preload="none"
+                              preload="metadata"
                               style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
                             />
                           ) : (

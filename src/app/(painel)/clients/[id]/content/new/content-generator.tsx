@@ -302,7 +302,7 @@ function PreviewPanel({
                     src={creativeUrl}
                     controls
                     playsInline
-                    preload="none"
+                    preload="metadata"
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 ) : (
