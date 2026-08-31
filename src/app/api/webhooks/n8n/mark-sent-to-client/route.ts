@@ -13,9 +13,11 @@ export async function POST(req: NextRequest) {
 
   const supabase = await createClient()
 
+  // requires_client_approval é obrigatório: sem ele o story não aparece na
+  // página de aprovação do cliente (ver src/app/approve/[token]/page.tsx)
   await supabase
     .from('contents')
-    .update({ status: 'sent_to_client' })
+    .update({ status: 'sent_to_client', requires_client_approval: true })
     .eq('id', contentId)
     .eq('status', 'approved_by_me') // só muda se ainda estiver approved_by_me
 

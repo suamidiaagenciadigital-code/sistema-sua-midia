@@ -14,9 +14,11 @@ export async function POST(req: NextRequest) {
 
   const supabase = await createClient()
 
+  // requires_client_approval é obrigatório: sem ele o story não aparece na
+  // página de aprovação do cliente (ver src/app/approve/[token]/page.tsx)
   const { count } = await supabase
     .from('contents')
-    .update({ status: 'sent_to_client' })
+    .update({ status: 'sent_to_client', requires_client_approval: true })
     .eq('client_id', clientId)
     .eq('status', 'approved_by_me')
     .gte('scheduled_date', weekStart)
