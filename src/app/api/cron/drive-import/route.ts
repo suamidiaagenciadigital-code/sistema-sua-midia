@@ -48,12 +48,15 @@ async function processJsonFile(
     return { status: 'error', reason: `JSON inválido: ${e.message}` }
   }
 
-  const caption = (parsed.caption ?? '').trim()
-  if (!caption) {
-    return { status: 'skipped', reason: 'Legenda vazia no .json' }
-  }
   if (!['imagem', 'reel', 'story', 'carrossel'].includes(parsed.type)) {
     return { status: 'skipped', reason: `Tipo inválido: "${parsed.type}"` }
+  }
+
+  // Story normalmente não tem legenda — a trava de legenda vazia só vale
+  // pros tipos que realmente precisam de texto.
+  const caption = (parsed.caption ?? '').trim()
+  if (!caption && parsed.type !== 'story') {
+    return { status: 'skipped', reason: 'Legenda vazia no .json' }
   }
   if (!parsed.files || parsed.files.length === 0) {
     return { status: 'skipped', reason: 'Nenhum arquivo de mídia listado no .json' }
