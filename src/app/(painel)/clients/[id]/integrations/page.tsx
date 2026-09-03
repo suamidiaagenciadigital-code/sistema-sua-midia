@@ -187,11 +187,12 @@ export default async function IntegrationsPage({ params }: Props) {
               type="text"
               name="drive_folder_id"
               defaultValue={c.drive_folder_id ?? ''}
-              placeholder="Ex: 11n_z-ekPVjr4fB7LRw3iGSCliqTo2H7Y"
+              placeholder="Ex: 1EGH-NXG_QEMZ9AYLI2p1uwitX7_4h4_u"
               className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 font-mono text-xs"
             />
             <p className="text-xs text-zinc-500">
-              Pasta que contém as pastas de cada mês (ex: SETEMBRO), que por sua vez contêm os dias (ex: 09-09).
+              A pasta raiz do cliente — a que contém as pastas de cada ano (ex: 2026), que por sua vez contêm os
+              meses (ex: SETEMBRO) e os dias (ex: 09-09). Estrutura: Cliente → Ano → Mês → Dia.
               O ID é o trecho após <code className="bg-zinc-800 px-1 rounded">/folders/</code> no link do Drive.
               Deixe em branco para desativar a importação automática deste cliente.
             </p>

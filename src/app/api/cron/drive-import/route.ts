@@ -137,12 +137,22 @@ export async function GET(req: NextRequest) {
 
   for (const client of clients ?? []) {
     try {
-      const monthFolders = await listSubfolders(client.drive_folder_id!)
       const now = new Date()
+
+      // Estrutura real no Drive: Cliente / Ano / Mês / Dia
+      const yearFolders = await listSubfolders(client.drive_folder_id!)
+      const yearName = String(now.getFullYear())
+      const yearFolder = yearFolders.find((f) => f.name.trim() === yearName)
+      if (!yearFolder) {
+        summary.push({ client: client.name, error: `Pasta do ano "${yearName}" não encontrada` })
+        continue
+      }
+
+      const monthFolders = await listSubfolders(yearFolder.id)
       const monthName = MESES[now.getMonth()]
       const monthFolder = monthFolders.find((f) => normalize(f.name) === monthName)
       if (!monthFolder) {
-        summary.push({ client: client.name, error: `Pasta do mês "${monthName}" não encontrada` })
+        summary.push({ client: client.name, error: `Pasta do mês "${monthName}" não encontrada dentro de ${yearName}` })
         continue
       }
 
