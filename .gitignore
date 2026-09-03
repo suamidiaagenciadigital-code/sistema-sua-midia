@@ -33,6 +33,14 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# credenciais soltas na raiz do projeto (ex: chave de conta de serviço do Google) —
+# nunca devem entrar em versionamento, mesmo que caiam aqui por acidente
+/*.json
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/components.json
+
 # vercel
 .vercel
 
