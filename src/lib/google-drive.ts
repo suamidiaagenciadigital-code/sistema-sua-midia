@@ -31,10 +31,53 @@ export interface DriveFile {
 
 let cachedToken: { value: string; expiresAt: number } | null = null
 
+/**
+ * Ao colar a chave da conta de serviço numa variável de ambiente, é comum
+ * que editores/visualizadores transformem os `\n` escapados dentro do
+ * `private_key` em quebras de linha reais — o que invalida o JSON (uma
+ * string não pode conter quebra de linha literal sem escape).
+ *
+ * Corrige isso reescapando quebras de linha reais que caem DENTRO de uma
+ * string JSON, sem tocar nas que ficam entre tokens (essas já são válidas).
+ */
+function sanitizeServiceAccountJson(raw: string): string {
+  let out = ''
+  let inString = false
+  let escaped = false
+  for (const ch of raw) {
+    if (escaped) {
+      out += ch
+      escaped = false
+      continue
+    }
+    if (ch === '\\') {
+      out += ch
+      escaped = true
+      continue
+    }
+    if (ch === '"') {
+      inString = !inString
+      out += ch
+      continue
+    }
+    if (inString && (ch === '\n' || ch === '\r')) {
+      out += '\\n'
+      continue
+    }
+    out += ch
+  }
+  return out
+}
+
 function getServiceAccount(): ServiceAccountKey {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_KEY
   if (!raw) throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY não configurada')
-  return JSON.parse(raw)
+  try {
+    return JSON.parse(raw)
+  } catch {
+    // Fallback: quebras de linha reais dentro da chave privada
+    return JSON.parse(sanitizeServiceAccountJson(raw))
+  }
 }
 
 function base64url(input: Buffer | string): string {
