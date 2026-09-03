@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Users, Clock, CalendarCheck, MessageSquare } from 'lucide-react'
+import { Users, Clock, CalendarCheck, MessageSquare, AlertTriangle } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -12,6 +12,7 @@ export default async function DashboardPage() {
     { count: openTickets },
     { data: nextContents },
     { data: firstClient },
+    { data: driveIssues },
   ] = await Promise.all([
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
     supabase.from('contents').select('*', { count: 'exact', head: true }).eq('status', 'pending_my_approval'),
@@ -31,6 +32,11 @@ export default async function DashboardPage() {
       .order('name')
       .limit(1)
       .single(),
+    supabase.from('drive_imports')
+      .select('id, folder_name, status, reason, created_at, clients(name)')
+      .in('status', ['skipped', 'error'])
+      .order('created_at', { ascending: false })
+      .limit(10),
   ])
 
   const metrics = [
@@ -131,6 +137,45 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Importações do Drive puladas ou com erro */}
+      {!!driveIssues?.length && (
+        <div
+          className="rounded-lg p-5"
+          style={{ backgroundColor: '#131b2e', border: '1px solid rgba(245,158,11,0.3)' }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="h-4 w-4" style={{ color: '#f59e0b' }} />
+            <h2 className="text-sm font-semibold text-white">Importações pendentes do Drive</h2>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {driveIssues.map((d: any) => (
+              <div
+                key={d.id}
+                className="flex items-center justify-between py-3"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <div>
+                  <p className="text-sm text-white font-medium">
+                    {(d.clients as any)?.name} · pasta {d.folder_name}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">{d.reason}</p>
+                </div>
+                <span
+                  className="text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ml-3"
+                  style={{
+                    backgroundColor: d.status === 'error' ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
+                    color: d.status === 'error' ? '#ef4444' : '#f59e0b',
+                    border: `1px solid ${d.status === 'error' ? 'rgba(239,68,68,0.25)' : 'rgba(245,158,11,0.25)'}`,
+                  }}
+                >
+                  {d.status === 'error' ? 'Erro' : 'Pulado'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Próximos para aprovar */}
       <div

@@ -172,6 +172,37 @@ export default async function IntegrationsPage({ params }: Props) {
           </div>
         </div>
 
+        {/* Importação automática do Drive */}
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-4">
+          <div className="flex items-center gap-2 pb-1 border-b border-zinc-800">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current text-amber-400">
+              <path d="M7.71 3.5L1.15 15l3.43 6h6.56l6.56-11.5L14.27 3.5zm1.15 2h6.42l4.86 8.5H9.86zM4.02 16l3.15-5.51 4.86 8.51H7.71zm8.63 3l3.13-5.48L19.15 19z"/>
+            </svg>
+            <h2 className="text-sm font-semibold text-white">Importação automática do Drive</h2>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm text-zinc-300 font-medium">ID da pasta raiz no Drive</label>
+            <input
+              type="text"
+              name="drive_folder_id"
+              defaultValue={c.drive_folder_id ?? ''}
+              placeholder="Ex: 11n_z-ekPVjr4fB7LRw3iGSCliqTo2H7Y"
+              className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500 font-mono text-xs"
+            />
+            <p className="text-xs text-zinc-500">
+              Pasta que contém as pastas de cada mês (ex: SETEMBRO), que por sua vez contêm os dias (ex: 09-09).
+              O ID é o trecho após <code className="bg-zinc-800 px-1 rounded">/folders/</code> no link do Drive.
+              Deixe em branco para desativar a importação automática deste cliente.
+            </p>
+          </div>
+
+          <div className="rounded-md bg-amber-950/20 border border-amber-800/40 p-3 text-xs text-amber-200/80 space-y-1">
+            <p className="font-medium text-amber-300">Antes de configurar:</p>
+            <p>Compartilhe esta pasta com a conta de serviço do sistema (Compartilhar → cole o e-mail da conta de serviço → Leitor).</p>
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <button
             type="submit"
