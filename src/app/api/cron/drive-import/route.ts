@@ -100,8 +100,12 @@ async function processJsonFile(
       caption,
       scheduled_date: scheduledDate,
       scheduled_time: parsed.scheduled_time || null,
-      status: 'sent_to_client',
-      requires_client_approval: parsed.type === 'story',
+      // Story segue o fluxo padrão: fica "scheduled" e é aprovado
+      // automaticamente quando o cliente aprova qualquer post do mesmo dia
+      // (ver src/app/api/public-approval/route.ts). Não vai para a tela de
+      // aprovação individual — só os demais tipos vão direto pro cliente.
+      status: parsed.type === 'story' ? 'scheduled' : 'sent_to_client',
+      requires_client_approval: false,
       generated_image_url: generatedImageUrl,
       media_urls: mediaUrls,
     })
