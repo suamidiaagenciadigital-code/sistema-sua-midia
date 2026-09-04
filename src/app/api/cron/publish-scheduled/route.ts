@@ -69,6 +69,23 @@ export async function GET(req: NextRequest) {
   const results = await Promise.all(
     toPublish.map(async (content) => {
       try {
+        // "Claim" atômico: só segue se conseguir tirar o conteúdo de
+        // approved_by_client. Protege contra duas execuções concorrentes do
+        // cron (ex: retry por timeout do cron-job.org) publicarem o mesmo
+        // post duas vezes — o UPDATE condicional é resolvido pelo banco,
+        // então só uma das duas chamadas ganha a corrida.
+        const { data: claimed } = await supabase
+          .from('contents')
+          .update({ status: 'published' })
+          .eq('id', content.id)
+          .eq('status', 'approved_by_client')
+          .select('id')
+
+        if (!claimed || claimed.length === 0) {
+          console.log(`[cron] ${content.id} já foi reivindicado por outra execução — pulando`)
+          return { id: content.id, ok: false, skipped: 'already claimed' }
+        }
+
         console.log(`[cron] Publicando ${content.id} (${content.scheduled_date} ${content.scheduled_time})`)
         const resp = await fetch(`${baseUrl}/api/contents/${content.id}/publish-now`, {
           method: 'POST',
