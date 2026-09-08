@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { TYPE_LABEL } from '@/lib/content-status'
 import ApprovalActions from './approval-actions'
 import { MediaCarousel } from './media-carousel'
+import { StoryCarousel } from './story-carousel'
 import { CopyCaptionButton } from './copy-caption-button'
 import { WhatsAppShareButton } from './whatsapp-share-button'
 import { DownloadButton, DownloadAllButton } from './download-button'
@@ -119,8 +120,9 @@ export default async function PublicApprovalPage({ params }: Props) {
               const isReel = c.type === 'reel'
               const isCarousel = c.type === 'carrossel' && c.media_urls && c.media_urls.length > 0
               const isStory = c.type === 'story'
-              const storyUrl = isStory ? (c.media_urls?.[0] ?? c.generated_image_url ?? null) : null
-              const isStoryVideo = storyUrl ? /\.(mp4|mov|webm|m4v)(\?|$)/i.test(storyUrl) : false
+              const storyUrls = isStory
+                ? (c.media_urls?.length ? c.media_urls : c.generated_image_url ? [c.generated_image_url] : [])
+                : []
               const singleUrl = c.generated_image_url ?? null
 
               return (
@@ -144,24 +146,8 @@ export default async function PublicApprovalPage({ params }: Props) {
                   {/* Criativo */}
                   {isCarousel ? (
                     <MediaCarousel urls={c.media_urls!} />
-                  ) : isStory && storyUrl ? (
-                    <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
-                      {isStoryVideo ? (
-                        <video
-                          src={storyUrl}
-                          controls
-                          playsInline
-                          preload="metadata"
-                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
-                        />
-                      ) : (
-                        <img
-                          src={storyUrl}
-                          alt={c.title}
-                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      )}
-                    </div>
+                  ) : isStory && storyUrls.length > 0 ? (
+                    <StoryCarousel urls={storyUrls} title={c.title} />
                   ) : isReel && singleUrl ? (
                     <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                       {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
@@ -227,13 +213,15 @@ export default async function PublicApprovalPage({ params }: Props) {
                   )}
 
                   {/* Download + WhatsApp */}
-                  {(singleUrl || (c.media_urls && c.media_urls.length > 0)) && (
+                  {(singleUrl || storyUrls.length > 0 || (c.media_urls && c.media_urls.length > 0)) && (
                     <div className="px-4 pb-2 space-y-2">
                       {isCarousel ? (
                         <DownloadAllButton urls={c.media_urls!} />
+                      ) : isStory && storyUrls.length > 1 ? (
+                        <DownloadAllButton urls={storyUrls} />
                       ) : (
                         <DownloadButton
-                          url={singleUrl!}
+                          url={isStory ? storyUrls[0] : singleUrl!}
                           label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
                         />
                       )}
@@ -274,8 +262,9 @@ export default async function PublicApprovalPage({ params }: Props) {
                   const isReel = c.type === 'reel'
                   const isCarousel = c.type === 'carrossel' && c.media_urls && c.media_urls.length > 0
                   const isStoryA = c.type === 'story'
-                  const storyUrlA = isStoryA ? (c.media_urls?.[0] ?? c.generated_image_url ?? null) : null
-                  const isStoryVideoA = storyUrlA ? /\.(mp4|mov|webm|m4v)(\?|$)/i.test(storyUrlA) : false
+                  const storyUrlsA = isStoryA
+                    ? (c.media_urls?.length ? c.media_urls : c.generated_image_url ? [c.generated_image_url] : [])
+                    : []
                   const singleUrl = c.generated_image_url ?? null
 
                   return (
@@ -304,24 +293,8 @@ export default async function PublicApprovalPage({ params }: Props) {
                       {/* Criativo */}
                       {isCarousel ? (
                         <MediaCarousel urls={c.media_urls!} />
-                      ) : isStoryA && storyUrlA ? (
-                        <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
-                          {isStoryVideoA ? (
-                            <video
-                              src={storyUrlA}
-                              controls
-                              playsInline
-                              preload="metadata"
-                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
-                            />
-                          ) : (
-                            <img
-                              src={storyUrlA}
-                              alt={c.title}
-                              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                          )}
-                        </div>
+                      ) : isStoryA && storyUrlsA.length > 0 ? (
+                        <StoryCarousel urls={storyUrlsA} title={c.title} />
                       ) : isReel && singleUrl ? (
                         <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                           {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
@@ -353,12 +326,14 @@ export default async function PublicApprovalPage({ params }: Props) {
                           </p>
                           <div className="flex gap-2 pt-1 flex-wrap">
                             <CopyCaptionButton caption={c.caption} />
-                            {(singleUrl || (c.media_urls?.length ?? 0) > 0) && (
+                            {(singleUrl || storyUrlsA.length > 0 || (c.media_urls?.length ?? 0) > 0) && (
                               isCarousel ? (
                                 <DownloadAllButton urls={c.media_urls!} />
+                              ) : isStoryA && storyUrlsA.length > 1 ? (
+                                <DownloadAllButton urls={storyUrlsA} />
                               ) : (
                                 <DownloadButton
-                                  url={singleUrl!}
+                                  url={isStoryA ? storyUrlsA[0] : singleUrl!}
                                   label={isReel ? 'Baixar vídeo' : 'Baixar imagem'}
                                 />
                               )
