@@ -35,6 +35,10 @@ export async function POST(req: NextRequest) {
       scheduled_date: body.scheduled_date || null,
       scheduled_time: body.scheduled_time || null,
       status: body.status || 'pending_my_approval',
+      // Sem isso, story criado já com status sent_to_client nasce sem a
+      // aprovação exigida e some da página de aprovação do cliente
+      // (ver src/app/approve/[token]/page.tsx)
+      requires_client_approval: body.requires_client_approval ?? false,
       generated_image_url: generatedImageUrl,
       media_urls: mediaUrls,
       reel_scenes: body.reel_scenes ?? null,
