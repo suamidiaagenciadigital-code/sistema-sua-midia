@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
-import { rehostIfDriveVideo } from '@/lib/rehost-video'
+import { rehostIfDriveVideo, rehostMediaUrls } from '@/lib/rehost-video'
 import {
   listSubfolders,
   listFiles,
@@ -84,7 +84,10 @@ async function processJsonFile(
       return { status: 'error', reason: 'Falha ao re-hospedar o vídeo do Drive (arquivo indisponível ou muito grande)' }
     }
   } else if (isMultiFile || parsed.type === 'carrossel' || parsed.type === 'story') {
-    mediaUrls = urls
+    // Story pode ter frame em vídeo — sem rehost, o preview na aprovação só
+    // mostra a miniatura do Drive, sem tocar. rehostMediaUrls identifica
+    // sozinho quais frames são vídeo e rehospeda só esses; imagem passa direto.
+    mediaUrls = await rehostMediaUrls(urls, client.id)
   } else {
     generatedImageUrl = urls[0]
   }
