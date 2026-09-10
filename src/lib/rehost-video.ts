@@ -89,13 +89,23 @@ export async function rehostIfDriveVideo(
     }
 
     // Baixar o arquivo
-    const videoResp = await fetch(downloadUrl)
+    const videoResp = await fetch(downloadUrl, { signal: AbortSignal.timeout(120_000) })
     if (!videoResp.ok) return url
 
-    const buffer = await videoResp.arrayBuffer()
+    // A resposta do GET pode diferir do HEAD (página HTML de verificação do
+    // Drive sob rate limit) — revalida.
+    const getType = videoResp.headers.get('content-type') ?? ''
+    if (!getType.startsWith('video/') && !getType.startsWith('application/octet-stream')) {
+      return url
+    }
 
-    // Determinar extensão
-    const ext = contentType.split('/')[1]?.split(';')[0]?.trim() ?? 'mp4'
+    const expectedLen = Number(videoResp.headers.get('content-length') || 0)
+    const buffer = await videoResp.arrayBuffer()
+    // Download truncado ou pequeno demais: não sobe arquivo corrompido.
+    if (expectedLen > 0 && buffer.byteLength < expectedLen * 0.98) return url
+    if (buffer.byteLength < 50_000) return url
+
+    const ext = contentType.includes('quicktime') ? 'mov' : 'mp4'
     // O ID do Drive vai no nome para que a limpeza pós-publicação consiga
     // reconstruir a URL original — ver src/lib/cleanup-media.ts
     const path = `${clientId}/drive-${fileId}-${Date.now()}.${ext}`
@@ -104,7 +114,7 @@ export async function rehostIfDriveVideo(
     const supabase = supabaseEarly
     const { error: uploadError } = await supabase.storage
       .from('media')
-      .upload(path, new Uint8Array(buffer), { contentType })
+      .upload(path, new Uint8Array(buffer), { contentType: ext === 'mov' ? 'video/quicktime' : 'video/mp4' })
 
     if (uploadError) {
       console.error('[rehost-video] Upload error:', uploadError.message)

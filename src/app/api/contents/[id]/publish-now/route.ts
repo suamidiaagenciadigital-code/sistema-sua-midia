@@ -67,20 +67,40 @@ async function rehostDriveVideoForPublish(
 
     const downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`
 
-    const videoResp = await fetch(downloadUrl)
-    if (!videoResp.ok) return driveUrl
+    // O drive.usercontent tem rate limit e às vezes devolve HTML/parcial —
+    // tenta algumas vezes antes de desistir para não bloquear por
+    // instabilidade momentânea do Google.
+    let buffer: ArrayBuffer | null = null
+    let contentType = ''
+    for (let attempt = 0; attempt < 3 && !buffer; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 3000))
+      try {
+        const resp = await fetch(downloadUrl, { signal: AbortSignal.timeout(120_000) })
+        if (!resp.ok) continue
+        const ct = resp.headers.get('content-type') ?? ''
+        // Drive devolve página HTML de "confirmação de verificação" para
+        // arquivos grandes ou sob rate limit — não é o vídeo.
+        if (!ct.startsWith('video/') && !ct.startsWith('application/octet-stream')) continue
+        const expectedLen = Number(resp.headers.get('content-length') || 0)
+        const buf = await resp.arrayBuffer()
+        // Download truncado ou pequeno demais para ser vídeo.
+        if (expectedLen > 0 && buf.byteLength < expectedLen * 0.98) continue
+        if (buf.byteLength < 50_000) continue
+        buffer = buf
+        contentType = ct
+      } catch {
+        // tenta de novo
+      }
+    }
+    if (!buffer) return driveUrl
 
-    const contentType = videoResp.headers.get('content-type') ?? 'video/mp4'
-    if (!contentType.startsWith('video/')) return driveUrl
-
-    const buffer = await videoResp.arrayBuffer()
-    const ext = contentType.split('/')[1]?.split(';')[0]?.trim() ?? 'mp4'
+    const ext = contentType.includes('quicktime') ? 'mov' : 'mp4'
     // ID do Drive no nome para permitir a limpeza pós-publicação
     const path = `${clientId}/drive-${fileId}-${Date.now()}.${ext}`
 
     const { error } = await supabase.storage
       .from('media')
-      .upload(path, new Uint8Array(buffer), { contentType })
+      .upload(path, new Uint8Array(buffer), { contentType: ext === 'mov' ? 'video/quicktime' : 'video/mp4' })
 
     if (error) return driveUrl
 
@@ -370,10 +390,14 @@ export async function POST(
 
   await supabase.from('contents').update(updateData).eq('id', contentId)
 
-  // Publicou em alguma rede: a cópia do vídeo no Supabase já cumpriu o papel.
-  // Se nada foi publicado, o arquivo fica para a próxima tentativa.
+  // Só limpa a cópia re-hospedada quando a publicação saiu COMPLETA em todas
+  // as redes esperadas. Se o Instagram (ou o Facebook) falhou, o arquivo fica
+  // no Supabase para o retry não depender do download instável do Drive.
+  const igExpected = !!client.instagram_account_id
+  const fbFullyOk = !!fbPostId && !fbError
+  const igFullyOk = !igExpected || (!!igPostId && !igError)
   let cleaned = 0
-  if (fbPostId || igPostId) {
+  if (fbFullyOk && igFullyOk) {
     const { removed } = await cleanupAfterPublish(contentId, supabase)
     cleaned = removed
   }
