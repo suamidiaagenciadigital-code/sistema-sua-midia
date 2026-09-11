@@ -126,6 +126,43 @@ async function postForm(url: string, params: Record<string, string>): Promise<an
   try { return JSON.parse(text) } catch { return {} }
 }
 
+// Vídeo em /video_stories exige upload resumível em 3 fases — um POST direto
+// com file_url dá "(#100) The parameter upload_phase is required." A fase de
+// transferência aceita o header file_url para o Facebook buscar a URL
+// remotamente, sem precisar fazer stream dos bytes aqui.
+async function publishFacebookVideoStory(
+  pageId: string,
+  videoUrl: string,
+  pageToken: string,
+): Promise<{ post_id: string | null; error: string | null }> {
+  const start = await postForm(`${GRAPH}/${pageId}/video_stories`, {
+    upload_phase: 'start',
+    access_token: pageToken,
+  })
+  const videoId = start.video_id as string | undefined
+  const uploadUrl = start.upload_url as string | undefined
+  if (!videoId || !uploadUrl) {
+    return { post_id: null, error: start.error?.message ?? 'Falha ao iniciar upload do story (fase start)' }
+  }
+
+  const transferResp = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: { Authorization: `OAuth ${pageToken}`, file_url: videoUrl },
+  })
+  const transferData = await transferResp.json().catch(() => ({}))
+  if (!transferResp.ok || transferData.success === false) {
+    return { post_id: null, error: transferData.error?.message ?? 'Falha ao transferir o vídeo do story (fase transfer)' }
+  }
+
+  const finish = await postForm(`${GRAPH}/${pageId}/video_stories`, {
+    upload_phase: 'finish',
+    video_id: videoId,
+    access_token: pageToken,
+  })
+  if (finish.post_id) return { post_id: finish.post_id, error: null }
+  return { post_id: null, error: finish.error?.message ?? 'Falha ao publicar o story (fase finish)' }
+}
+
 // Troca o System User Token por um Page Access Token (necessário para /photos e /feed)
 async function getPageAccessToken(pageId: string, systemUserToken: string): Promise<string> {
   const resp = await fetch(`${GRAPH}/${pageId}?fields=access_token&access_token=${systemUserToken}`)
@@ -222,15 +259,16 @@ export async function POST(
       for (const frameUrl of storyUrls) {
         const isVid = await isVideoDriveUrl(frameUrl)
         const resolved = isVid ? resolveVideoUrl(frameUrl)! : resolveUrl(frameUrl)!
-        const endpoint = isVid
-          ? `${GRAPH}/${client.facebook_page_id}/video_stories`
-          : `${GRAPH}/${client.facebook_page_id}/photo_stories`
-        const fbResp = await postForm(
-          endpoint,
-          isVid
-            ? { file_url: resolved, access_token: fbPageToken }
-            : { url: resolved, access_token: fbPageToken },
-        )
+        if (isVid) {
+          const res = await publishFacebookVideoStory(client.facebook_page_id, resolved, fbPageToken)
+          if (res.post_id) fbPostId = res.post_id
+          if (res.error && !fbPostId) fbError = res.error
+          continue
+        }
+        const fbResp = await postForm(`${GRAPH}/${client.facebook_page_id}/photo_stories`, {
+          url: resolved,
+          access_token: fbPageToken,
+        })
         if (fbResp.post_id || fbResp.id) fbPostId = fbResp.post_id || fbResp.id
         if (fbResp.error && !fbPostId) fbError = fbResp.error.message
       }
