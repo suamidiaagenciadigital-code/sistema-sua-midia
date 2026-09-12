@@ -143,9 +143,11 @@ export async function GET(req: NextRequest) {
     .select('id, name, drive_folder_id')
     .not('drive_folder_id', 'is', null)
 
-  const summary: Record<string, unknown>[] = []
-
-  for (const client of clients ?? []) {
+  // Clientes em paralelo — o tempo todo é dominado por chamadas ao Drive, e
+  // um scan sequencial de vários clientes já estourou o timeout do
+  // cron-job.org (30s) mesmo sem nada para importar.
+  async function processClient(client: { id: string; name: string; drive_folder_id: string | null }) {
+    const entries: Record<string, unknown>[] = []
     try {
       const now = new Date()
 
@@ -154,23 +156,24 @@ export async function GET(req: NextRequest) {
       const yearName = String(now.getFullYear())
       const yearFolder = yearFolders.find((f) => f.name.trim() === yearName)
       if (!yearFolder) {
-        summary.push({ client: client.name, error: `Pasta do ano "${yearName}" não encontrada` })
-        continue
+        entries.push({ client: client.name, error: `Pasta do ano "${yearName}" não encontrada` })
+        return entries
       }
 
       const monthFolders = await listSubfolders(yearFolder.id)
       const monthName = MESES[now.getMonth()]
       const monthFolder = monthFolders.find((f) => normalize(f.name) === monthName)
       if (!monthFolder) {
-        summary.push({ client: client.name, error: `Pasta do mês "${monthName}" não encontrada dentro de ${yearName}` })
-        continue
+        entries.push({ client: client.name, error: `Pasta do mês "${monthName}" não encontrada dentro de ${yearName}` })
+        return entries
       }
 
       const dayFolders = await listSubfolders(monthFolder.id)
 
-      for (const dayFolder of dayFolders) {
+      // Pastas de dia também em paralelo — são independentes entre si.
+      await Promise.all(dayFolders.map(async (dayFolder) => {
         const match = dayFolder.name.match(DAY_FOLDER)
-        if (!match) continue
+        if (!match) return
         const [, dd, mm] = match
         const scheduledDate = `${now.getFullYear()}-${mm}-${dd}`
 
@@ -199,13 +202,17 @@ export async function GET(req: NextRequest) {
             content_id: result.contentId ?? null,
           })
 
-          summary.push({ client: client.name, folder: dayFolder.name, ...result })
+          entries.push({ client: client.name, folder: dayFolder.name, ...result })
         }
-      }
+      }))
     } catch (e: any) {
-      summary.push({ client: client.name, error: e.message })
+      entries.push({ client: client.name, error: e.message })
     }
+    return entries
   }
+
+  const results = await Promise.all((clients ?? []).map(processClient))
+  const summary = results.flat()
 
   return NextResponse.json({ ok: true, processed: summary })
 }
