@@ -11,7 +11,10 @@ import {
 } from '@/lib/google-drive'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+// O scan cresce com o número de pastas de dia acumuladas no mês — o
+// cron-job.org (limite fixo de 30s) mostra "Failed (timeout)" bem antes
+// disso, mas o Vercel continua rodando em segundo plano até aqui.
+export const maxDuration = 300
 
 const MESES = [
   'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
