@@ -187,7 +187,7 @@ export async function POST(
   // Buscar conteúdo
   const { data: content } = await supabase
     .from('contents')
-    .select('id, client_id, type, caption, generated_image_url, media_urls')
+    .select('id, client_id, type, caption, generated_image_url, media_urls, facebook_post_id, instagram_post_id')
     .eq('id', contentId)
     .single()
 
@@ -243,16 +243,21 @@ export async function POST(
 
   const resolvedImageUrl = resolveUrl(generatedImageUrl)
 
-  let fbPostId: string | null = null
+  // Já publicado antes (retry manual após falha parcial): reaproveita o id
+  // existente em vez de publicar de novo — sem isso, clicar "Publicar agora"
+  // numa publicação que já tinha saído no Facebook cria um post duplicado.
+  let fbPostId: string | null = (content.facebook_post_id as string | null) ?? null
   let fbError: string | null = null
-  let igPostId: string | null = null
+  let igPostId: string | null = (content.instagram_post_id as string | null) ?? null
   let igError: string | null = null
 
   // ── Facebook ─────────────────────────────────────────────────────────────
   // Troca System User Token por Page Access Token para operações na página
   const fbPageToken = await getPageAccessToken(client.facebook_page_id, pageToken)
 
-  try {
+  if (fbPostId) {
+    // já publicado numa tentativa anterior — não repete
+  } else try {
     if (isStory) {
       const storyUrls =
         mediaUrls.length > 0 ? mediaUrls : resolvedImageUrl ? [resolvedImageUrl] : []
@@ -321,7 +326,9 @@ export async function POST(
   }
 
   // ── Instagram ─────────────────────────────────────────────────────────────
-  if (client.instagram_account_id) {
+  if (igPostId) {
+    // já publicado numa tentativa anterior — não repete
+  } else if (client.instagram_account_id) {
     const igId = client.instagram_account_id.trim()
 
     const igCreateAndPublish = async (containerParams: Record<string, string>) => {
@@ -427,6 +434,16 @@ export async function POST(
   if (igPostId) updateData.instagram_post_id = igPostId
 
   await supabase.from('contents').update(updateData).eq('id', contentId)
+
+  // Guarda o erro real de cada rede — sem isso a causa se perde assim que o
+  // status vira "published", e só dava pra investigar durante a própria
+  // tentativa (log do Vercel). Update separado e tolerante a falha: se as
+  // colunas ainda não existirem no banco (migration_v10 pendente), não pode
+  // derrubar a gravação do post_id acima, que é o dado crítico.
+  await supabase.from('contents').update({
+    facebook_publish_error: fbPostId ? null : fbError,
+    instagram_publish_error: igPostId ? null : igError,
+  }).eq('id', contentId)
 
   // Só limpa a cópia re-hospedada quando a publicação saiu COMPLETA em todas
   // as redes esperadas. Se o Instagram (ou o Facebook) falhou, o arquivo fica

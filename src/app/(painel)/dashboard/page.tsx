@@ -13,6 +13,7 @@ export default async function DashboardPage() {
     { data: nextContents },
     { data: firstClient },
     { data: driveIssues },
+    { data: publishIssues },
   ] = await Promise.all([
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'ativo'),
     supabase.from('contents').select('*', { count: 'exact', head: true }).eq('status', 'pending_my_approval'),
@@ -36,6 +37,15 @@ export default async function DashboardPage() {
       .select('id, folder_name, status, reason, created_at, clients(name)')
       .in('status', ['skipped', 'error'])
       .order('created_at', { ascending: false })
+      .limit(10),
+    // "published" não significa que saiu em todas as redes — o status vira
+    // published mesmo com falha parcial. Sem esse card, a única forma de
+    // notar era o cliente reclamar que o post não apareceu no Instagram/Facebook.
+    supabase.from('contents')
+      .select('id, client_id, title, type, scheduled_date, facebook_publish_error, instagram_publish_error, clients(name)')
+      .eq('status', 'published')
+      .or('facebook_publish_error.not.is.null,instagram_publish_error.not.is.null')
+      .order('scheduled_date', { ascending: false })
       .limit(10),
   ])
 
@@ -172,6 +182,46 @@ export default async function DashboardPage() {
                   {d.status === 'error' ? 'Erro' : 'Pulado'}
                 </span>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Publicações com falha parcial (saiu em uma rede, não na outra) */}
+      {!!publishIssues?.length && (
+        <div
+          className="rounded-lg p-5"
+          style={{ backgroundColor: '#131b2e', border: '1px solid rgba(239,68,68,0.3)' }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="h-4 w-4" style={{ color: '#ef4444' }} />
+            <h2 className="text-sm font-semibold text-white">Publicações incompletas</h2>
+          </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {publishIssues.map((c: any) => (
+              <Link
+                key={c.id}
+                href={`/clients/${c.client_id}/content/${c.id}`}
+                className="flex items-center justify-between py-3 hover:bg-white/[0.02] transition-colors -mx-1 px-1 rounded"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <div>
+                  <p className="text-sm text-white font-medium">
+                    {(c.clients as any)?.name} · {c.title}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {c.facebook_publish_error && `Facebook: ${c.facebook_publish_error}`}
+                    {c.facebook_publish_error && c.instagram_publish_error && ' · '}
+                    {c.instagram_publish_error && `Instagram: ${c.instagram_publish_error}`}
+                  </p>
+                </div>
+                <span
+                  className="text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ml-3"
+                  style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}
+                >
+                  Revisar
+                </span>
+              </Link>
             ))}
           </div>
         </div>
