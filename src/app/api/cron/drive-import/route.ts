@@ -200,7 +200,23 @@ export async function GET(req: NextRequest) {
             folder_name: dayFolder.name,
             status: 'processing',
           })
-          if (claimError) continue // já reivindicado por outra execução (ou erro transitório — tenta de novo no próximo cron)
+          if (claimError) {
+            // Já existe um registro pra esse arquivo. Só pula de vez se ele
+            // já foi importado ou pulado com sucesso — "error" (falha
+            // transitória, ex: timeout do Supabase) e "processing" (execução
+            // anterior travou no meio) continuam tentando de novo, senão o
+            // arquivo fica perdido pra sempre na primeira falha de rede.
+            const { data: existing } = await supabase
+              .from('drive_imports')
+              .select('status')
+              .eq('drive_json_file_id', jsonFile.id)
+              .maybeSingle()
+            if (!existing || existing.status === 'imported' || existing.status === 'skipped') continue
+            await supabase
+              .from('drive_imports')
+              .update({ status: 'processing', reason: null })
+              .eq('drive_json_file_id', jsonFile.id)
+          }
 
           let result: Awaited<ReturnType<typeof processJsonFile>>
           try {
