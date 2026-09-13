@@ -186,24 +186,37 @@ export async function GET(req: NextRequest) {
         )
 
         for (const jsonFile of jsonFiles) {
-          // Idempotência: já processado antes?
-          const { data: already } = await supabase
-            .from('drive_imports')
-            .select('id')
-            .eq('drive_json_file_id', jsonFile.id)
-            .maybeSingle()
-          if (already) continue
-
-          const result = await processJsonFile(client, jsonFile, dayFiles, scheduledDate, supabase)
-
-          await supabase.from('drive_imports').insert({
+          // Idempotência via "claim" atômico: tenta inserir ANTES de
+          // processar. A constraint única de drive_json_file_id garante que
+          // só uma execução consegue reivindicar o arquivo — uma consulta
+          // SELECT antes do INSERT (jeito antigo) podia falhar sob
+          // concorrência (várias pastas de dia em paralelo) e tratar um
+          // arquivo já importado como novo, duplicando o conteúdo a cada
+          // execução do cron sem deixar rastro (o INSERT seguinte batia na
+          // mesma constraint e falhava calado).
+          const { error: claimError } = await supabase.from('drive_imports').insert({
             client_id: client.id,
             drive_json_file_id: jsonFile.id,
             folder_name: dayFolder.name,
-            status: result.status,
-            reason: result.reason ?? null,
-            content_id: result.contentId ?? null,
+            status: 'processing',
           })
+          if (claimError) continue // já reivindicado por outra execução (ou erro transitório — tenta de novo no próximo cron)
+
+          let result: Awaited<ReturnType<typeof processJsonFile>>
+          try {
+            result = await processJsonFile(client, jsonFile, dayFiles, scheduledDate, supabase)
+          } catch (e: any) {
+            result = { status: 'error', reason: e.message }
+          }
+
+          await supabase
+            .from('drive_imports')
+            .update({
+              status: result.status,
+              reason: result.reason ?? null,
+              content_id: result.contentId ?? null,
+            })
+            .eq('drive_json_file_id', jsonFile.id)
 
           entries.push({ client: client.name, folder: dayFolder.name, ...result })
         }
