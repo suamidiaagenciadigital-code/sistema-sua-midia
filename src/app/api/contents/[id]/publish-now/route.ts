@@ -50,8 +50,14 @@ async function isVideoDriveUrl(url: string | null | undefined): Promise<boolean>
   }
 }
 
-// Re-hospeda vídeo do Drive no Supabase Storage e retorna URL pública permanente
-async function rehostDriveVideoForPublish(
+// Re-hospeda um arquivo do Drive (vídeo OU imagem) no Supabase Storage e
+// retorna a URL pública permanente. Vídeo sempre precisou disso (Meta não
+// baixa vídeo do Drive). Imagem foi adicionada depois: o lh3.googleusercontent.com
+// geralmente funciona, mas às vezes o Meta não consegue buscar de lá —
+// "Missing or invalid image file" (Facebook) / "Only photo or video can be
+// accepted as media type" (Instagram) — mesmo a URL funcionando normal no
+// navegador. Uma cópia no Supabase evita depender da confiabilidade do Google.
+async function rehostDriveFileForPublish(
   driveUrl: string,
   clientId: string,
   supabase: ReturnType<typeof createServiceClient>,
@@ -79,13 +85,15 @@ async function rehostDriveVideoForPublish(
         if (!resp.ok) continue
         const ct = resp.headers.get('content-type') ?? ''
         // Drive devolve página HTML de "confirmação de verificação" para
-        // arquivos grandes ou sob rate limit — não é o vídeo.
-        if (!ct.startsWith('video/') && !ct.startsWith('application/octet-stream')) continue
+        // arquivos grandes ou sob rate limit — não é o arquivo de verdade.
+        const isVideo = ct.startsWith('video/')
+        const isImage = ct.startsWith('image/')
+        if (!isVideo && !isImage && !ct.startsWith('application/octet-stream')) continue
         const expectedLen = Number(resp.headers.get('content-length') || 0)
         const buf = await resp.arrayBuffer()
-        // Download truncado ou pequeno demais para ser vídeo.
+        // Download truncado ou pequeno demais pra ser o arquivo de verdade.
         if (expectedLen > 0 && buf.byteLength < expectedLen * 0.98) continue
-        if (buf.byteLength < 50_000) continue
+        if (buf.byteLength < (isImage ? 2_000 : 50_000)) continue
         buffer = buf
         contentType = ct
       } catch {
@@ -94,13 +102,22 @@ async function rehostDriveVideoForPublish(
     }
     if (!buffer) return driveUrl
 
-    const ext = contentType.includes('quicktime') ? 'mov' : 'mp4'
+    const isVideo = contentType.startsWith('video/')
+    let ext: string
+    let uploadContentType: string
+    if (isVideo) {
+      ext = contentType.includes('quicktime') ? 'mov' : 'mp4'
+      uploadContentType = ext === 'mov' ? 'video/quicktime' : 'video/mp4'
+    } else {
+      ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : contentType.includes('gif') ? 'gif' : 'jpg'
+      uploadContentType = contentType.startsWith('image/') ? contentType : `image/${ext}`
+    }
     // ID do Drive no nome para permitir a limpeza pós-publicação
     const path = `${clientId}/drive-${fileId}-${Date.now()}.${ext}`
 
     const { error } = await supabase.storage
       .from('media')
-      .upload(path, new Uint8Array(buffer), { contentType: ext === 'mov' ? 'video/quicktime' : 'video/mp4' })
+      .upload(path, new Uint8Array(buffer), { contentType: uploadContentType })
 
     if (error) return driveUrl
 
@@ -113,6 +130,22 @@ async function rehostDriveVideoForPublish(
   } catch {
     return driveUrl
   }
+}
+
+// Resolve uma URL de imagem pra uso direto pelo Meta: se for do Drive, tenta
+// re-hospedar no Supabase primeiro (mais confiável); se o rehost falhar
+// (arquivo privado, Drive fora do ar), cai no lh3.googleusercontent.com como
+// último recurso — pode falhar de novo, mas não bloqueia a tentativa.
+async function resolveImageForMeta(
+  url: string | null | undefined,
+  clientId: string,
+  supabase: ReturnType<typeof createServiceClient>,
+): Promise<string | null> {
+  if (!url) return null
+  if (!isDriveUrl(url)) return url
+  const rehosted = await rehostDriveFileForPublish(url, clientId, supabase)
+  if (!isDriveUrl(rehosted)) return rehosted
+  return resolveUrl(url)
 }
 
 async function postForm(url: string, params: Record<string, string>): Promise<any> {
@@ -228,7 +261,7 @@ export async function POST(
   // Para Reels: o Instagram não consegue baixar vídeos direto do Google Drive.
   // É obrigatório re-hospedar no Supabase antes de publicar.
   if ((type === 'reel') && isDriveUrl(generatedImageUrl)) {
-    const rehosted = await rehostDriveVideoForPublish(generatedImageUrl!, content.client_id, supabase)
+    const rehosted = await rehostDriveFileForPublish(generatedImageUrl!, content.client_id, supabase)
     if (isDriveUrl(rehosted)) {
       // Rehosting falhou (arquivo privado, muito grande, ou Drive bloqueou o download)
       return NextResponse.json({
@@ -241,7 +274,10 @@ export async function POST(
     generatedImageUrl = rehosted
   }
 
-  const resolvedImageUrl = resolveUrl(generatedImageUrl)
+  // Imagem simples: tenta re-hospedar no Supabase antes de resolver (mais
+  // confiável que o Meta buscar do lh3.googleusercontent.com direto). Se
+  // falhar, resolveImageForMeta cai pro lh3 como último recurso.
+  const resolvedImageUrl = await resolveImageForMeta(generatedImageUrl, content.client_id, supabase)
 
   // Já publicado antes (retry manual após falha parcial): reaproveita o id
   // existente em vez de publicar de novo — sem isso, clicar "Publicar agora"
@@ -263,7 +299,7 @@ export async function POST(
         mediaUrls.length > 0 ? mediaUrls : resolvedImageUrl ? [resolvedImageUrl] : []
       for (const frameUrl of storyUrls) {
         const isVid = await isVideoDriveUrl(frameUrl)
-        const resolved = isVid ? resolveVideoUrl(frameUrl)! : resolveUrl(frameUrl)!
+        const resolved = isVid ? resolveVideoUrl(frameUrl)! : (await resolveImageForMeta(frameUrl, content.client_id, supabase))!
         if (isVid) {
           const res = await publishFacebookVideoStory(client.facebook_page_id, resolved, fbPageToken)
           if (res.post_id) fbPostId = res.post_id
@@ -291,7 +327,7 @@ export async function POST(
       const photoIds: string[] = []
       for (const url of mediaUrls) {
         const photoResp = await postForm(`${GRAPH}/${client.facebook_page_id}/photos`, {
-          url: resolveUrl(url) ?? '',
+          url: (await resolveImageForMeta(url, content.client_id, supabase)) ?? '',
           published: 'false',
           access_token: fbPageToken,
         })
@@ -374,7 +410,7 @@ export async function POST(
         const itemIds: string[] = []
         for (const url of mediaUrls) {
           const item = await postForm(`${GRAPH}/${igId}/media`, {
-            image_url: resolveUrl(url) ?? '',
+            image_url: (await resolveImageForMeta(url, content.client_id, supabase)) ?? '',
             is_carousel_item: 'true',
             access_token: pageToken,
           })
@@ -406,7 +442,7 @@ export async function POST(
           mediaUrls.length > 0 ? mediaUrls : resolvedImageUrl ? [resolvedImageUrl] : []
         for (const frameUrl of storyUrls) {
           const isVid = await isVideoDriveUrl(frameUrl)
-          const resolved = isVid ? resolveVideoUrl(frameUrl)! : resolveUrl(frameUrl)!
+          const resolved = isVid ? resolveVideoUrl(frameUrl)! : (await resolveImageForMeta(frameUrl, content.client_id, supabase))!
           const storyParams: Record<string, string> = { media_type: 'STORIES', access_token: pageToken }
           if (isVid) storyParams.video_url = resolved
           else storyParams.image_url = resolved
