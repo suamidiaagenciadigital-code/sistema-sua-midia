@@ -9,9 +9,16 @@ interface Props {
 }
 
 const VIDEO_EXT = /\.(mp4|mov|webm|m4v)(\?|$)/i
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif)(\?|$)/i
 
+// "supabase" sozinho não basta mais pra detectar vídeo — imagem também é
+// re-hospedada lá agora (ver rehost-video.ts). A extensão no nome do
+// arquivo (sempre presente, o rehost preserva o tipo real) decide primeiro;
+// "supabase" só entra como fallback pra alguma URL sem extensão reconhecível.
 function isVideoUrl(url: string): boolean {
-  return url.includes('supabase') || VIDEO_EXT.test(url)
+  if (VIDEO_EXT.test(url)) return true
+  if (IMAGE_EXT.test(url)) return false
+  return url.includes('supabase')
 }
 
 // Imagem do Drive: link direto de CDN (funciona em <img src>)
@@ -39,18 +46,15 @@ function withPosterFrame(url: string): string {
 
 function StoryFrame({ url, title }: { url: string; title: string }) {
   if (isVideoUrl(url)) {
-    // Vídeo já rehostado (Supabase) ou com extensão reconhecível: toca direto
-    if (url.includes('supabase') || VIDEO_EXT.test(url)) {
-      return (
-        <video
-          src={withPosterFrame(url)}
-          controls
-          playsInline
-          preload="metadata"
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
-        />
-      )
-    }
+    return (
+      <video
+        src={withPosterFrame(url)}
+        controls
+        playsInline
+        preload="metadata"
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+    )
   }
   // Link cru do Drive sem extensão no nome — não dá pra saber se é vídeo
   // sem baixar o arquivo, então usa o preview embutido do Drive, que

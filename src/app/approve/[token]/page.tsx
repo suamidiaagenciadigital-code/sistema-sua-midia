@@ -36,6 +36,19 @@ function withPosterFrame(url: string): string {
   return url.includes('#') ? url : `${url}#t=0.3`
 }
 
+const VIDEO_EXT = /\.(mp4|mov|webm|m4v)(\?|$)/i
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif)(\?|$)/i
+
+// "supabase" sozinho não basta mais pra detectar vídeo — imagem também é
+// re-hospedada lá agora (ver rehost-video.ts). A extensão no nome do
+// arquivo (sempre presente, o rehost preserva o tipo real) decide primeiro;
+// "supabase" só entra como fallback pra alguma URL sem extensão reconhecível.
+function isVideoUrl(url: string): boolean {
+  if (VIDEO_EXT.test(url)) return true
+  if (IMAGE_EXT.test(url)) return false
+  return url.includes('supabase')
+}
+
 
 const TYPE_EMOJI: Record<string, string> = {
   feed: '📷',
@@ -158,7 +171,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                     <StoryCarousel urls={storyUrls} title={c.title} />
                   ) : isReel && singleUrl ? (
                     <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
-                      {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
+                      {isVideoUrl(singleUrl) ? (
                         <video
                           src={withPosterFrame(singleUrl)}
                           controls
@@ -305,7 +318,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                         <StoryCarousel urls={storyUrlsA} title={c.title} />
                       ) : isReel && singleUrl ? (
                         <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
-                          {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
+                          {isVideoUrl(singleUrl) ? (
                             <video
                               src={withPosterFrame(singleUrl)}
                               controls
