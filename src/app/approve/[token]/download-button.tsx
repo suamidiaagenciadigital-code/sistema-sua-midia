@@ -21,7 +21,7 @@ function extFromType(type: string): string {
   return 'jpg'
 }
 
-async function downloadBlob(url: string, baseName: string) {
+async function fetchAsFile(url: string, baseName: string): Promise<File> {
   const resp = await fetch(`/api/download?url=${encodeURIComponent(url)}`, { credentials: 'include' })
   if (!resp.ok) throw new Error('Falha ao baixar')
 
@@ -31,14 +31,45 @@ async function downloadBlob(url: string, baseName: string) {
   const blob = await resp.blob()
   const filename = `${baseName}.${serverExt ?? extFromType(blob.type)}`
 
-  const blobUrl = URL.createObjectURL(blob)
+  return new File([blob], filename, { type: blob.type })
+}
+
+function triggerAnchorDownload(file: File) {
+  const blobUrl = URL.createObjectURL(file)
   const a = document.createElement('a')
   a.href = blobUrl
-  a.download = filename
+  a.download = file.name
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+}
+
+// No Safari do iPhone, <a download> sempre cai em "Salvar em Arquivos" — nunca
+// oferece salvar direto na galeria de Fotos. O Web Share API, quando o
+// navegador suporta compartilhar o arquivo de verdade, faz o próprio iOS
+// mostrar "Guardar Imagem/Vídeo" na folha de compartilhamento nativa. Onde
+// não tem suporte (a maioria dos desktops), cai no download tradicional —
+// comportamento inalterado.
+async function shareOrDownload(files: File[]) {
+  let canShare = false
+  try {
+    canShare = typeof navigator !== 'undefined' && !!navigator.share && !!navigator.canShare?.({ files })
+  } catch {
+    canShare = false
+  }
+
+  if (canShare) {
+    try {
+      await navigator.share({ files })
+      return
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return // usuário cancelou a folha de compartilhamento — não é erro
+      // qualquer outro erro no share cai pro download tradicional abaixo
+    }
+  }
+
+  files.forEach(triggerAnchorDownload)
 }
 
 interface SingleProps {
@@ -52,7 +83,8 @@ export function DownloadButton({ url, label }: SingleProps) {
   async function handle() {
     setState('loading')
     try {
-      await downloadBlob(url, `suamidia-${Date.now()}`)
+      const file = await fetchAsFile(url, `suamidia-${Date.now()}`)
+      await shareOrDownload([file])
       setState('done')
       setTimeout(() => setState('idle'), 3000)
     } catch {
@@ -86,12 +118,42 @@ export function DownloadAllButton({ urls }: AllProps) {
 
   async function handle() {
     setState('loading')
+    const files: File[] = []
     for (let i = 0; i < urls.length; i++) {
       try {
-        await downloadBlob(urls[i], `suamidia-slide-${i + 1}`)
+        files.push(await fetchAsFile(urls[i], `suamidia-slide-${i + 1}`))
       } catch { /* continua mesmo se um falhar */ }
-      if (i < urls.length - 1) await new Promise(r => setTimeout(r, 800))
     }
+
+    // Um único navigator.share com todos os slides — no iPhone o próprio iOS
+    // oferece "Guardar N Imagens" pra galeria de uma vez, em vez de 5 folhas
+    // de download separadas. Sem suporte, cai no download individual de
+    // sempre (com o intervalo entre cada um, que o Safari precisa pra não
+    // engasgar downloads simultâneos).
+    let canShare = false
+    try {
+      canShare = files.length > 0 && typeof navigator !== 'undefined' && !!navigator.share && !!navigator.canShare?.({ files })
+    } catch {
+      canShare = false
+    }
+
+    let shared = false
+    if (canShare) {
+      try {
+        await navigator.share({ files })
+        shared = true
+      } catch (e: any) {
+        shared = e?.name === 'AbortError' // cancelado pelo usuário — não tenta o fallback
+      }
+    }
+
+    if (!shared) {
+      for (let i = 0; i < files.length; i++) {
+        triggerAnchorDownload(files[i])
+        if (i < files.length - 1) await new Promise(r => setTimeout(r, 800))
+      }
+    }
+
     setState('done')
     setTimeout(() => setState('idle'), 3000)
   }
