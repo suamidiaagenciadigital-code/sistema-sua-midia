@@ -29,13 +29,21 @@ function driveEmbedUrl(url: string): string {
   return url
 }
 
+// preload="metadata" nem sempre pinta o primeiro frame como capa no Safari
+// do iPhone — o vídeo fica com a tela preta até o cliente apertar o play.
+// O fragmento #t=0.1 faz o navegador buscar e exibir esse instante como
+// capa sem precisar tocar o vídeo nem baixar ele inteiro (preload="auto").
+function withPosterFrame(url: string): string {
+  return url.includes('#') ? url : `${url}#t=0.1`
+}
+
 function StoryFrame({ url, title }: { url: string; title: string }) {
   if (isVideoUrl(url)) {
     // Vídeo já rehostado (Supabase) ou com extensão reconhecível: toca direto
     if (url.includes('supabase') || VIDEO_EXT.test(url)) {
       return (
         <video
-          src={url}
+          src={withPosterFrame(url)}
           controls
           playsInline
           preload="metadata"

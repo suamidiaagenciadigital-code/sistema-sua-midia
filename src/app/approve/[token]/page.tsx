@@ -28,6 +28,14 @@ function getDriveEmbedUrl(url: string | null): string | null {
   return url
 }
 
+// preload="metadata" nem sempre pinta o primeiro frame como capa no Safari
+// do iPhone — o vídeo fica com a tela preta até o cliente apertar o play.
+// O fragmento #t=0.1 faz o navegador buscar e exibir esse instante como
+// capa sem precisar tocar o vídeo nem baixar ele inteiro (preload="auto").
+function withPosterFrame(url: string): string {
+  return url.includes('#') ? url : `${url}#t=0.1`
+}
+
 
 const TYPE_EMOJI: Record<string, string> = {
   feed: '📷',
@@ -152,7 +160,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                     <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                       {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
                         <video
-                          src={singleUrl}
+                          src={withPosterFrame(singleUrl)}
                           controls
                           playsInline
                           preload="metadata"
@@ -299,7 +307,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                         <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                           {singleUrl.includes('supabase') || /\.(mp4|mov|webm|m4v)(\?|$)/i.test(singleUrl) ? (
                             <video
-                              src={singleUrl}
+                              src={withPosterFrame(singleUrl)}
                               controls
                               playsInline
                               preload="metadata"
