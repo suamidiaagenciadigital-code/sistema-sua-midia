@@ -109,68 +109,22 @@ export function DownloadButton({ url, label }: SingleProps) {
   )
 }
 
-interface AllProps {
+interface EachProps {
   urls: string[]
+  labelPrefix?: string
 }
 
-export function DownloadAllButton({ urls }: AllProps) {
-  const [state, setState] = useState<'idle' | 'loading' | 'done'>('idle')
-
-  async function handle() {
-    setState('loading')
-    const files: File[] = []
-    for (let i = 0; i < urls.length; i++) {
-      try {
-        files.push(await fetchAsFile(urls[i], `suamidia-slide-${i + 1}`))
-      } catch { /* continua mesmo se um falhar */ }
-    }
-
-    // Um único navigator.share com todos os slides — no iPhone o próprio iOS
-    // oferece "Guardar N Imagens" pra galeria de uma vez, em vez de 5 folhas
-    // de download separadas. Sem suporte, cai no download individual de
-    // sempre (com o intervalo entre cada um, que o Safari precisa pra não
-    // engasgar downloads simultâneos).
-    let canShare = false
-    try {
-      canShare = files.length > 0 && typeof navigator !== 'undefined' && !!navigator.share && !!navigator.canShare?.({ files })
-    } catch {
-      canShare = false
-    }
-
-    let shared = false
-    if (canShare) {
-      try {
-        await navigator.share({ files })
-        shared = true
-      } catch (e: any) {
-        shared = e?.name === 'AbortError' // cancelado pelo usuário — não tenta o fallback
-      }
-    }
-
-    if (!shared) {
-      for (let i = 0; i < files.length; i++) {
-        triggerAnchorDownload(files[i])
-        if (i < files.length - 1) await new Promise(r => setTimeout(r, 800))
-      }
-    }
-
-    setState('done')
-    setTimeout(() => setState('idle'), 3000)
-  }
-
+// Um botão por slide/frame, cada um reaproveitando o DownloadButton (Web
+// Share quando suportado, senão download tradicional) — evita disparar
+// vários downloads em sequência de uma vez só, que no Safari do iPhone
+// gerava uma folha "Salvar em..." atrás da outra.
+export function DownloadEachButton({ urls, labelPrefix = 'Baixar slide' }: EachProps) {
   return (
-    <button
-      onClick={handle}
-      disabled={state === 'loading'}
-      className="flex items-center justify-center gap-2 w-full py-2 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white hover:border-zinc-500 text-sm transition-colors disabled:opacity-50"
-    >
-      {state === 'loading' ? (
-        <><svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>Baixando...</>
-      ) : state === 'done' ? (
-        <>✓ Slides baixados!</>
-      ) : (
-        <><DownloadIcon />Baixar todos os slides ({urls.length})</>
-      )}
-    </button>
+    <div className="space-y-2 w-full">
+      {urls.map((url, i) => (
+        <DownloadButton key={url} url={url} label={`${labelPrefix} ${i + 1}`} />
+      ))}
+    </div>
   )
 }
+

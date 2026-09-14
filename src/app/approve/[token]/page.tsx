@@ -6,7 +6,7 @@ import { MediaCarousel } from './media-carousel'
 import { StoryCarousel } from './story-carousel'
 import { CopyCaptionButton } from './copy-caption-button'
 import { WhatsAppShareButton } from './whatsapp-share-button'
-import { DownloadButton, DownloadAllButton } from './download-button'
+import { DownloadButton, DownloadEachButton } from './download-button'
 
 interface Props {
   params: Promise<{ token: string }>
@@ -216,9 +216,9 @@ export default async function PublicApprovalPage({ params }: Props) {
                   {(singleUrl || storyUrls.length > 0 || (c.media_urls && c.media_urls.length > 0)) && (
                     <div className="px-4 pb-2 space-y-2">
                       {isCarousel ? (
-                        <DownloadAllButton urls={c.media_urls!} />
+                        <DownloadEachButton urls={c.media_urls!} labelPrefix="Baixar slide" />
                       ) : isStory && storyUrls.length > 1 ? (
-                        <DownloadAllButton urls={storyUrls} />
+                        <DownloadEachButton urls={storyUrls} labelPrefix="Baixar frame" />
                       ) : (
                         <DownloadButton
                           url={isStory ? storyUrls[0] : singleUrl!}
@@ -328,9 +328,9 @@ export default async function PublicApprovalPage({ params }: Props) {
                             <CopyCaptionButton caption={c.caption} />
                             {(singleUrl || storyUrlsA.length > 0 || (c.media_urls?.length ?? 0) > 0) && (
                               isCarousel ? (
-                                <DownloadAllButton urls={c.media_urls!} />
+                                <DownloadEachButton urls={c.media_urls!} labelPrefix="Baixar slide" />
                               ) : isStoryA && storyUrlsA.length > 1 ? (
-                                <DownloadAllButton urls={storyUrlsA} />
+                                <DownloadEachButton urls={storyUrlsA} labelPrefix="Baixar frame" />
                               ) : (
                                 <DownloadButton
                                   url={isStoryA ? storyUrlsA[0] : singleUrl!}
