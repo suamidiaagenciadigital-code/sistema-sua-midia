@@ -155,30 +155,46 @@ export async function GET(req: NextRequest) {
       const now = new Date()
 
       // Estrutura real no Drive: Cliente / Ano / Mês / Dia
+      // Varre o mês atual E o seguinte: o conteúdo de outubro costuma ser
+      // colocado no Drive ainda em setembro, e olhar só o mês corrente fazia
+      // ele esperar até dia 1º pra ser importado.
       const yearFolders = await listSubfolders(client.drive_folder_id!)
-      const yearName = String(now.getFullYear())
-      const yearFolder = yearFolders.find((f) => f.name.trim() === yearName)
-      if (!yearFolder) {
-        entries.push({ client: client.name, error: `Pasta do ano "${yearName}" não encontrada` })
-        return entries
-      }
+      const targets = [
+        { year: now.getFullYear(), month: now.getMonth(), required: true },
+        {
+          year: now.getMonth() === 11 ? now.getFullYear() + 1 : now.getFullYear(),
+          month: (now.getMonth() + 1) % 12,
+          required: false, // mês seguinte ainda pode nem ter pasta — não é erro
+        },
+      ]
 
-      const monthFolders = await listSubfolders(yearFolder.id)
-      const monthName = MESES[now.getMonth()]
-      const monthFolder = monthFolders.find((f) => normalize(f.name) === monthName)
-      if (!monthFolder) {
-        entries.push({ client: client.name, error: `Pasta do mês "${monthName}" não encontrada dentro de ${yearName}` })
-        return entries
-      }
+      const dayJobs: { dayFolder: DriveFile; year: number }[] = []
+      for (const t of targets) {
+        const yearName = String(t.year)
+        const yearFolder = yearFolders.find((f) => f.name.trim() === yearName)
+        if (!yearFolder) {
+          if (t.required) entries.push({ client: client.name, error: `Pasta do ano "${yearName}" não encontrada` })
+          continue
+        }
 
-      const dayFolders = await listSubfolders(monthFolder.id)
+        const monthFolders = await listSubfolders(yearFolder.id)
+        const monthName = MESES[t.month]
+        const monthFolder = monthFolders.find((f) => normalize(f.name) === monthName)
+        if (!monthFolder) {
+          if (t.required) entries.push({ client: client.name, error: `Pasta do mês "${monthName}" não encontrada dentro de ${yearName}` })
+          continue
+        }
+
+        const dayFolders = await listSubfolders(monthFolder.id)
+        for (const dayFolder of dayFolders) dayJobs.push({ dayFolder, year: t.year })
+      }
 
       // Pastas de dia também em paralelo — são independentes entre si.
-      await Promise.all(dayFolders.map(async (dayFolder) => {
+      await Promise.all(dayJobs.map(async ({ dayFolder, year }) => {
         const match = dayFolder.name.match(DAY_FOLDER)
         if (!match) return
         const [, dd, mm] = match
-        const scheduledDate = `${now.getFullYear()}-${mm}-${dd}`
+        const scheduledDate = `${year}-${mm}-${dd}`
 
         const dayFiles = await listFiles(dayFolder.id)
         const jsonFiles = dayFiles.filter(
