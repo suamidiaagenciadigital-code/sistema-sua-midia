@@ -109,12 +109,6 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
           {GOOGLE_FIELDS.map((f) => numRow(f, f.key === 'google_spend'))}
         </section>
 
-        <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-white">Recado da agência</h2>
-          <input name="highlight" defaultValue={report.highlight} placeholder="Título do destaque (opcional)" className={input} />
-          <textarea name="note" defaultValue={report.note} rows={4} placeholder="O que fizemos, o que funcionou, próximos passos…" className={input} />
-        </section>
-
         <button type="submit" className="rounded-full px-6 py-2.5 text-sm font-bold text-white" style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}>
           Salvar
         </button>

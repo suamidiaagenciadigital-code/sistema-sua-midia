@@ -31,17 +31,7 @@ export type NumKey =
   | (typeof AD_FIELDS)[number]['key']
   | (typeof GOOGLE_FIELDS)[number]['key']
 
-export interface TopPost {
-  caption: string
-  permalink: string
-  media_type: string
-  likes: number
-  comments: number
-}
-
-export type ReportValues = Partial<Record<NumKey, number>> & {
-  top_post?: TopPost
-}
+export type ReportValues = Partial<Record<NumKey, number>>
 
 export interface PostCounts {
   published: number
@@ -58,8 +48,6 @@ export interface MonthReport {
   values: ReportValues // automático + manual já mesclados
   auto: ReportValues
   overrides: ReportValues
-  note: string
-  highlight: string
   posts: PostCounts
   igError: string | null
 }
@@ -150,14 +138,13 @@ async function fetchInstagram(
   const total = (metric: string) =>
     gj(`${GRAPH}/${igId}/insights?metric=${metric}&metric_type=total_value&period=day&since=${w.since}&until=${w.until}&access_token=${t}`)
 
-  const [reach, views, inter, prof, fol, acct, media] = await Promise.all([
+  const [reach, views, inter, prof, fol, acct] = await Promise.all([
     total('reach'),
     total('views'),
     total('total_interactions'),
     total('profile_views'),
     gj(`${GRAPH}/${igId}/insights?metric=follower_count&period=day&since=${w.since}&until=${w.until}&access_token=${t}`),
     isCurrent ? gj(`${GRAPH}/${igId}?fields=followers_count&access_token=${t}`) : Promise.resolve(null),
-    gj(`${GRAPH}/${igId}/media?fields=caption,media_type,timestamp,like_count,comments_count,permalink&limit=100&access_token=${t}`),
   ])
 
   const values: ReportValues = {}
@@ -178,29 +165,6 @@ async function fetchInstagram(
   }
   if (acct && typeof acct.followers_count === 'number') values.followers_total = acct.followers_count
 
-  // Post de maior engajamento do mês
-  const [y, m] = ym.split('-').map(Number)
-  const start = Date.UTC(y, m - 1, 1, 3)
-  const end = Date.UTC(y, m, 1, 3)
-  let best: TopPost | null = null
-  let bestScore = -1
-  for (const p of media?.data ?? []) {
-    const ts = new Date(String(p.timestamp).replace('+0000', 'Z')).getTime()
-    if (ts < start || ts >= end) continue
-    const score = (p.like_count ?? 0) + (p.comments_count ?? 0)
-    if (score > bestScore) {
-      bestScore = score
-      best = {
-        caption: String(p.caption ?? '').slice(0, 140),
-        permalink: p.permalink,
-        media_type: p.media_type,
-        likes: p.like_count ?? 0,
-        comments: p.comments_count ?? 0,
-      }
-    }
-  }
-  if (best) values.top_post = best
-
   return { values, error }
 }
 
@@ -217,7 +181,7 @@ export async function getMonthReport(
 
   const { data: row } = await db
     .from('monthly_reports')
-    .select('overrides, snapshot, snapshot_at, note, highlight')
+    .select('overrides, snapshot, snapshot_at')
     .eq('client_id', client.id)
     .eq('month', ym)
     .maybeSingle()
@@ -258,8 +222,6 @@ export async function getMonthReport(
     values,
     auto: snapshot,
     overrides,
-    note: row?.note ?? '',
-    highlight: row?.highlight ?? '',
     posts: await countPosts(client.id, ym),
     igError,
   }

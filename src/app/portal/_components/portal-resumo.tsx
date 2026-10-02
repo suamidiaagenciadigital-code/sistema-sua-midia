@@ -78,7 +78,6 @@ export default function PortalResumo({ cur, prev, curLabel, prevLabel, upcoming,
   const hasAds = AD_FIELDS.some((f) => cur.values[f.key] !== undefined)
   const hasGoogle = GOOGLE_FIELDS.some((f) => cur.values[f.key] !== undefined)
   const igCards = IG_FIELDS.filter((f) => cur.values[f.key] !== undefined)
-  const top = cur.values.top_post
 
   return (
     <div className="space-y-8">
@@ -172,32 +171,6 @@ export default function PortalResumo({ cur, prev, curLabel, prevLabel, upcoming,
                 prev={prev.values.google_whatsapp}
                 sub={perResult(cur.values.google_spend, cur.values.google_whatsapp, 'conversa')}
               />
-            )}
-          </div>
-        </Section>
-      )}
-
-      {(cur.highlight || cur.note || top) && (
-        <Section title="Destaques do mês">
-          <div className="grid gap-3 lg:grid-cols-2">
-            {top && (
-              <a
-                href={top.permalink}
-                target="_blank"
-                rel="noreferrer"
-                className="bg-[#131b2e] rounded-2xl border border-slate-800 px-5 py-4 space-y-2 hover:border-slate-600 transition-colors block"
-              >
-                <p className="text-slate-400 text-xs font-medium uppercase tracking-wide">Publicação com mais engajamento</p>
-                <p className="text-white text-sm leading-relaxed">{top.caption || 'Ver publicação'}{top.caption.length >= 140 ? '…' : ''}</p>
-                <p className="text-slate-500 text-xs">❤ {fmt(top.likes)} · 💬 {fmt(top.comments)} · Ver no Instagram →</p>
-              </a>
-            )}
-            {(cur.highlight || cur.note) && (
-              <div className="bg-[#131b2e] rounded-2xl border border-slate-800 px-5 py-4 space-y-2">
-                <p className="text-slate-400 text-xs font-medium uppercase tracking-wide">Recado da agência</p>
-                {cur.highlight && <p className="text-white text-sm font-semibold">{cur.highlight}</p>}
-                {cur.note && <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{cur.note}</p>}
-              </div>
             )}
           </div>
         </Section>

@@ -22,8 +22,6 @@ export async function saveReportAction(clientId: string, month: string, formData
       client_id: clientId,
       month,
       overrides,
-      note: String(formData.get('note') ?? '').trim() || null,
-      highlight: String(formData.get('highlight') ?? '').trim() || null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'client_id,month' },
