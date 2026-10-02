@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { resolvePortalClient } from '@/lib/portal-session'
 import PortalNav from '@/app/portal/_components/portal-nav'
 import PortalMetricas from '@/app/portal/_components/portal-metricas'
 import { MonthSelector } from '@/app/portal/_components/month-selector'
@@ -97,17 +98,12 @@ async function fetchInstagramMetrics(igId: string, token: string, year: number, 
 }
 
 interface Props {
-  searchParams: Promise<{ month?: string }>
+  searchParams: Promise<{ month?: string; cliente?: string }>
 }
 
 export default async function MetricasPage({ searchParams }: Props) {
   const sp = await searchParams
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/portal/login')
-
-  const clientId = user.user_metadata?.client_id as string
-  if (!clientId) redirect('/portal/login')
+  const { clientId, isPreview } = await resolvePortalClient(sp.cliente)
 
   const db = createServiceClient()
   const { data: client } = await db
@@ -148,7 +144,7 @@ export default async function MetricasPage({ searchParams }: Props) {
 
   return (
     <div>
-      <PortalNav clientName={client.name} active="metricas" />
+      <PortalNav clientName={client.name} active="metricas" previewClientId={isPreview ? clientId : undefined} />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
           <div>
@@ -157,7 +153,7 @@ export default async function MetricasPage({ searchParams }: Props) {
               {monthLabel} vs {prevLabel}
             </p>
           </div>
-          <MonthSelector selected={selectedMonth} />
+          <MonthSelector selected={selectedMonth} previewClientId={isPreview ? clientId : undefined} />
         </div>
 
         {error && (

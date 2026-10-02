@@ -10,8 +10,9 @@ const NAV = [
   { href: '/portal/metricas', label: 'Métricas', key: 'metricas' },
 ]
 
-export default function PortalNav({ clientName, active }: { clientName: string; active: string }) {
+export default function PortalNav({ clientName, active, previewClientId }: { clientName: string; active: string; previewClientId?: string }) {
   const router = useRouter()
+  const suffix = previewClientId ? `?cliente=${previewClientId}` : ''
 
   async function handleLogout() {
     const supabase = createClient()
@@ -21,6 +22,13 @@ export default function PortalNav({ clientName, active }: { clientName: string; 
   }
 
   return (
+    <>
+    {previewClientId && (
+      <div className="bg-amber-500/15 border-b border-amber-500/30 text-amber-300 text-xs px-4 py-2 flex items-center justify-between gap-3">
+        <span>Visualizando como o cliente <strong>{clientName}</strong> — só você (agência) vê este aviso.</span>
+        <Link href={`/clients/${previewClientId}`} className="underline hover:text-amber-200 shrink-0">Voltar ao painel</Link>
+      </div>
+    )}
     <header className="border-b border-slate-800 bg-[#0d1628]">
       <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo + nome */}
@@ -36,7 +44,7 @@ export default function PortalNav({ clientName, active }: { clientName: string; 
           {NAV.map(item => (
             <Link
               key={item.key}
-              href={item.href}
+              href={`${item.href}${suffix}`}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 active === item.key
                   ? 'bg-slate-800 text-white'
@@ -48,13 +56,15 @@ export default function PortalNav({ clientName, active }: { clientName: string; 
           ))}
         </nav>
 
-        {/* Sair */}
-        <button
-          onClick={handleLogout}
-          className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
-        >
-          Sair
-        </button>
+        {/* Sair (no modo "ver como o cliente" não há login do cliente para encerrar) */}
+        {!previewClientId && (
+          <button
+            onClick={handleLogout}
+            className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
+          >
+            Sair
+          </button>
+        )}
       </div>
 
       {/* Nav mobile */}
@@ -62,7 +72,7 @@ export default function PortalNav({ clientName, active }: { clientName: string; 
         {NAV.map(item => (
           <Link
             key={item.key}
-            href={item.href}
+            href={`${item.href}${suffix}`}
             className={`flex-1 text-center py-2.5 text-sm font-medium transition-colors ${
               active === item.key
                 ? 'text-white border-b-2 border-blue-500'
@@ -74,5 +84,6 @@ export default function PortalNav({ clientName, active }: { clientName: string; 
         ))}
       </div>
     </header>
+    </>
   )
 }

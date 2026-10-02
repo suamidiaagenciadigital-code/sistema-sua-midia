@@ -1,15 +1,12 @@
 import { redirect } from 'next/navigation'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
+import { resolvePortalClient } from '@/lib/portal-session'
 import PortalNav from '@/app/portal/_components/portal-nav'
 import PortalCalendario from '@/app/portal/_components/portal-calendario'
 
-export default async function CalendarioPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/portal/login')
-
-  const clientId = user.user_metadata?.client_id as string
-  if (!clientId) redirect('/portal/login')
+export default async function CalendarioPage({ searchParams }: { searchParams: Promise<{ cliente?: string }> }) {
+  const sp = await searchParams
+  const { clientId, isPreview } = await resolvePortalClient(sp.cliente)
 
   const db = createServiceClient()
 
@@ -32,7 +29,7 @@ export default async function CalendarioPage() {
 
   return (
     <div>
-      <PortalNav clientName={client.name} active="calendario" />
+      <PortalNav clientName={client.name} active="calendario" previewClientId={isPreview ? clientId : undefined} />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-white text-2xl font-bold">Calendário Editorial</h1>

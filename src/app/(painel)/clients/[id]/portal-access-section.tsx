@@ -64,7 +64,7 @@ export function PortalAccessSection({
         <div className="flex items-center gap-2">
           {active && (
             <a
-              href="https://sistema.suamidia.com.br/portal"
+              href={`/portal?cliente=${clientId}`}
               target="_blank"
               rel="noreferrer"
               className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-lg px-3 py-1.5 transition-colors"

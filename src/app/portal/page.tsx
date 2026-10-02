@@ -1,10 +1,8 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { resolvePortalClient } from '@/lib/portal-session'
 
-export default async function PortalPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) redirect('/portal/login')
-  redirect('/portal/publicacoes')
+export default async function PortalPage({ searchParams }: { searchParams: Promise<{ cliente?: string }> }) {
+  const sp = await searchParams
+  const { clientId, isPreview } = await resolvePortalClient(sp.cliente)
+  redirect(isPreview ? `/portal/publicacoes?cliente=${clientId}` : '/portal/publicacoes')
 }

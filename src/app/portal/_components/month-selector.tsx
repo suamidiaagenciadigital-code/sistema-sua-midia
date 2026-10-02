@@ -25,14 +25,14 @@ function getAvailableMonths(): string[] {
   return months.reverse()
 }
 
-export function MonthSelector({ selected }: { selected: string }) {
+export function MonthSelector({ selected, previewClientId }: { selected: string; previewClientId?: string }) {
   const router = useRouter()
   const months = getAvailableMonths()
 
   return (
     <select
       value={selected}
-      onChange={e => router.push(`/portal/metricas?month=${e.target.value}`)}
+      onChange={e => router.push(`/portal/metricas?month=${e.target.value}${previewClientId ? `&cliente=${previewClientId}` : ''}`)}
       className="bg-[#131b2e] border border-slate-700 text-white text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500 cursor-pointer"
     >
       {months.map(m => (

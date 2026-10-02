@@ -60,8 +60,9 @@ export async function proxy(request: NextRequest) {
     if (isPortalLogin) return supabaseResponse
     // Não autenticado → login do portal
     if (!user) return NextResponse.redirect(new URL('/portal/login', request.url))
-    // Usuário da agência tentando entrar no portal → redireciona para painel
-    if (!isClientUser) return NextResponse.redirect(new URL('/dashboard', request.url))
+    // Agência pode abrir o portal em modo "ver como o cliente" (?cliente=<id>);
+    // quem decide de qual cliente é a tela é resolvePortalClient()
+    // (src/lib/portal-session.ts) — cliente nunca enxerga outro cliente.
     return supabaseResponse
   }
 
