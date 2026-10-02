@@ -49,6 +49,8 @@ export interface PostCounts {
 
 export interface MonthReport {
   month: string
+  note: string
+  highlight: string
   values: ReportValues // automático + manual já mesclados
   auto: ReportValues
   overrides: ReportValues
@@ -187,7 +189,7 @@ export async function getMonthReport(
 
   const { data: row } = await db
     .from('monthly_reports')
-    .select('overrides, snapshot, snapshot_at')
+    .select('overrides, snapshot, snapshot_at, note, highlight')
     .eq('client_id', client.id)
     .eq('month', ym)
     .maybeSingle()
@@ -229,6 +231,8 @@ export async function getMonthReport(
     values,
     auto: snapshot,
     overrides,
+    note: row?.note ?? '',
+    highlight: row?.highlight ?? '',
     posts: await countPosts(client.id, ym),
     igError,
   }

@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AD_FIELDS, GOOGLE_FIELDS, IG_FIELDS, isValidMonth } from '@/lib/portal-report'
 
@@ -22,11 +23,14 @@ export async function saveReportAction(clientId: string, month: string, formData
       client_id: clientId,
       month,
       overrides,
+      note: String(formData.get('note') ?? '').trim() || null,
+      highlight: String(formData.get('highlight') ?? '').trim() || null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'client_id,month' },
   )
 
-  revalidatePath(`/clients/${clientId}/relatorio`)
   revalidatePath('/portal/metricas')
+  // volta pra mesma tela com o aviso "Salvo" — antes não havia nenhum retorno visual
+  redirect(`/clients/${clientId}/relatorio?month=${month}&saved=1`)
 }

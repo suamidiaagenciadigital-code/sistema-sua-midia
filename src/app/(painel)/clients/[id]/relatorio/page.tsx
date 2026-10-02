@@ -9,7 +9,7 @@ import { saveReportAction } from './actions'
 
 interface Props {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ month?: string }>
+  searchParams: Promise<{ month?: string; saved?: string }>
 }
 
 const input = 'w-full rounded-lg bg-zinc-950 border border-zinc-700 px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500'
@@ -79,6 +79,12 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
         </a>
       </div>
 
+      {sp.saved === '1' && (
+        <p className="text-sm text-emerald-300 bg-emerald-950/30 border border-emerald-800/40 rounded-lg px-3 py-2">
+          ✓ Salvo. O resumo de {monthLabel(month)} já está atualizado no portal do cliente.
+        </p>
+      )}
+
       {report.igError && (
         <p className="text-xs text-amber-400 bg-amber-950/30 border border-amber-800/40 rounded-lg px-3 py-2">
           O Instagram não devolveu todos os números ({report.igError}). Você pode preencher manualmente abaixo.
@@ -107,6 +113,13 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
           <h2 className="text-sm font-semibold text-white mb-1">Google Ads</h2>
           <p className="text-xs text-zinc-500 mb-3">Preenchimento manual. Campo vazio não aparece pro cliente.</p>
           {GOOGLE_FIELDS.map((f) => numRow(f, f.key === 'google_spend'))}
+        </section>
+
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-3">
+          <h2 className="text-sm font-semibold text-white">Recado da agência</h2>
+          <p className="text-xs text-zinc-500">Aparece pro cliente na aba Resumo, no mês selecionado.</p>
+          <input name="highlight" defaultValue={report.highlight} placeholder="Título (opcional)" className={input} />
+          <textarea name="note" defaultValue={report.note} rows={8} placeholder="O que fizemos, o que funcionou, próximos passos…" className={input} />
         </section>
 
         <button type="submit" className="rounded-full px-6 py-2.5 text-sm font-bold text-white" style={{ background: 'linear-gradient(to right, #2B80FF, #A855F7)' }}>

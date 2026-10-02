@@ -176,6 +176,15 @@ export default function PortalResumo({ cur, prev, curLabel, prevLabel, upcoming,
         </Section>
       )}
 
+      {(cur.highlight || cur.note) && (
+        <Section title="Recado da agência">
+          <div className="bg-[#131b2e] rounded-2xl border border-slate-800 px-5 py-4 space-y-2">
+            {cur.highlight && <p className="text-white text-sm font-semibold">{cur.highlight}</p>}
+            {cur.note && <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">{cur.note}</p>}
+          </div>
+        </Section>
+      )}
+
       <Section title="Próximas publicações">
         {upcoming.length === 0 ? (
           <p className="text-slate-500 text-sm bg-[#131b2e] rounded-2xl border border-slate-800 px-5 py-4">Nenhuma publicação agendada no momento.</p>
