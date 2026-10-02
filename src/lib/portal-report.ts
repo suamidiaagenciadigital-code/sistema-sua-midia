@@ -16,8 +16,8 @@ export const IG_FIELDS = [
 export const AD_FIELDS = [
   { key: 'ads_spend', label: 'Investido em anúncios (R$)', hint: '' },
   { key: 'ads_reach', label: 'Alcance dos anúncios', hint: '' },
-  { key: 'ads_clicks', label: 'Cliques', hint: '' },
-  { key: 'ads_results', label: 'Resultados', hint: 'Ex.: mensagens, leads, visitas' },
+  { key: 'ads_whatsapp', label: 'Conversas no WhatsApp iniciadas', hint: 'Campanhas de mensagem' },
+  { key: 'ads_site_clicks', label: 'Cliques no link / visitas ao site', hint: 'Campanhas de tráfego' },
 ] as const
 
 export type NumKey = (typeof IG_FIELDS)[number]['key'] | (typeof AD_FIELDS)[number]['key']
@@ -31,7 +31,6 @@ export interface TopPost {
 }
 
 export type ReportValues = Partial<Record<NumKey, number>> & {
-  ads_results_label?: string
   top_post?: TopPost
 }
 
@@ -242,7 +241,7 @@ export async function getMonthReport(
   const overrides: ReportValues = (row?.overrides as ReportValues) ?? {}
   const values: ReportValues = { ...snapshot }
   for (const [k, v] of Object.entries(overrides)) {
-    if (v !== null && v !== undefined && v !== '') (values as Record<string, unknown>)[k] = v
+    if (typeof v === 'number') (values as Record<string, unknown>)[k] = v
   }
 
   return {

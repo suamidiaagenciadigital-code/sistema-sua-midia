@@ -14,8 +14,6 @@ export async function saveReportAction(clientId: string, month: string, formData
     const n = Number(raw.replace(/\./g, '').replace(',', '.'))
     if (Number.isFinite(n)) overrides[f.key] = n
   }
-  const label = String(formData.get('ov_ads_results_label') ?? '').trim()
-  if (label) overrides.ads_results_label = label
 
   const supabase = await createClient()
   // upsert só com estas colunas: o snapshot automático do mês não é tocado

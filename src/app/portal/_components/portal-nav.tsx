@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase/client'
 const NAV = [
   { href: '/portal/metricas', label: 'Resumo', key: 'metricas' },
   { href: '/portal/publicacoes', label: 'Publicações', key: 'publicacoes' },
-  { href: '/portal/calendario', label: 'Calendário', key: 'calendario' },
 ]
 
 export default function PortalNav({ clientName, active, previewClientId }: { clientName: string; active: string; previewClientId?: string }) {

@@ -99,12 +99,8 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
 
         <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
           <h2 className="text-sm font-semibold text-white mb-1">Anúncios</h2>
-          <p className="text-xs text-zinc-500 mb-3">Sem leitura automática — preencha só se o cliente anunciou no mês. Vazio = bloco não aparece.</p>
+          <p className="text-xs text-zinc-500 mb-3">Sem leitura automática. Preencha o que se aplica: campanha de mensagem usa “Conversas no WhatsApp”, campanha de tráfego usa “Cliques no link”. Campo vazio não aparece pro cliente.</p>
           {AD_FIELDS.map((f) => numRow(f, f.key === 'ads_spend'))}
-          <div className="pt-3">
-            <label className="text-xs text-zinc-400">O que são os “Resultados”? (ex.: Mensagens, Leads)</label>
-            <input name="ov_ads_results_label" defaultValue={report.overrides.ads_results_label ?? ''} placeholder="Resultados" className={`${input} mt-1`} />
-          </div>
         </section>
 
         <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-3">

@@ -9,6 +9,12 @@ function fmtMoney(n: number): string {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// Custo médio por resultado (só aparece com investimento e resultado maiores que zero)
+function perResult(spend: number | undefined, results: number | undefined, unit: string): string | undefined {
+  if (!spend || !results) return undefined
+  return `${fmtMoney(spend / results)} por ${unit}`
+}
+
 function Delta({ cur, prev }: { cur?: number; prev?: number }) {
   if (cur === undefined || prev === undefined || prev === 0) return null
   const diff = Math.round(((cur - prev) / prev) * 100)
@@ -122,9 +128,23 @@ export default function PortalResumo({ cur, prev, curLabel, prevLabel, upcoming,
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {cur.values.ads_spend !== undefined && <Card label="Investido" value={fmtMoney(cur.values.ads_spend)} cur={cur.values.ads_spend} prev={prev.values.ads_spend} />}
             {cur.values.ads_reach !== undefined && <Card label="Alcance" value={fmt(cur.values.ads_reach)} cur={cur.values.ads_reach} prev={prev.values.ads_reach} />}
-            {cur.values.ads_clicks !== undefined && <Card label="Cliques" value={fmt(cur.values.ads_clicks)} cur={cur.values.ads_clicks} prev={prev.values.ads_clicks} />}
-            {cur.values.ads_results !== undefined && (
-              <Card label={cur.values.ads_results_label || 'Resultados'} value={fmt(cur.values.ads_results)} cur={cur.values.ads_results} prev={prev.values.ads_results} />
+            {cur.values.ads_whatsapp !== undefined && (
+              <Card
+                label="Conversas no WhatsApp"
+                value={fmt(cur.values.ads_whatsapp)}
+                cur={cur.values.ads_whatsapp}
+                prev={prev.values.ads_whatsapp}
+                sub={perResult(cur.values.ads_spend, cur.values.ads_whatsapp, 'conversa')}
+              />
+            )}
+            {cur.values.ads_site_clicks !== undefined && (
+              <Card
+                label="Cliques no site"
+                value={fmt(cur.values.ads_site_clicks)}
+                cur={cur.values.ads_site_clicks}
+                prev={prev.values.ads_site_clicks}
+                sub={perResult(cur.values.ads_spend, cur.values.ads_site_clicks, 'clique')}
+              />
             )}
           </div>
         </Section>
