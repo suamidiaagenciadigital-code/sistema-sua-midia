@@ -84,6 +84,8 @@ export default function PortalResumo({ cur, prev, curLabel, prevLabel, upcoming,
       {pendingApprovals > 0 && approvalToken && (
         <Link
           href={`/approve/${approvalToken}`}
+          target="_blank"
+          rel="noopener noreferrer"
           className="flex items-center justify-between gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 hover:bg-amber-500/15 transition-colors"
         >
           <span className="text-amber-200 text-sm font-medium">
