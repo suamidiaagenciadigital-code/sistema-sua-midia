@@ -9,6 +9,7 @@ export const IG_FIELDS = [
   { key: 'reach', label: 'Alcance', hint: 'Contas diferentes alcançadas' },
   { key: 'interactions', label: 'Interações', hint: 'Curtidas, comentários, salvamentos e compartilhamentos' },
   { key: 'profile_views', label: 'Visitas ao perfil', hint: '' },
+  { key: 'bio_clicks', label: 'Cliques no link da bio', hint: 'Toques no site/link do perfil' },
   { key: 'new_followers', label: 'Novos seguidores', hint: '' },
   { key: 'followers_total', label: 'Seguidores (total)', hint: 'Total no fim do mês' },
 ] as const
@@ -31,7 +32,10 @@ export type NumKey =
   | (typeof AD_FIELDS)[number]['key']
   | (typeof GOOGLE_FIELDS)[number]['key']
 
-export type ReportValues = Partial<Record<NumKey, number>>
+// v = versão do formato da leitura automática; subir quando entrar métrica nova
+// (meses passados só são relidos se o snapshot guardado for de versão antiga)
+export const SNAPSHOT_VERSION = 2
+export type ReportValues = Partial<Record<NumKey, number>> & { v?: number }
 
 export interface PostCounts {
   published: number
@@ -138,11 +142,12 @@ async function fetchInstagram(
   const total = (metric: string) =>
     gj(`${GRAPH}/${igId}/insights?metric=${metric}&metric_type=total_value&period=day&since=${w.since}&until=${w.until}&access_token=${t}`)
 
-  const [reach, views, inter, prof, fol, acct] = await Promise.all([
+  const [reach, views, inter, prof, site, fol, acct] = await Promise.all([
     total('reach'),
     total('views'),
     total('total_interactions'),
     total('profile_views'),
+    total('website_clicks'),
     gj(`${GRAPH}/${igId}/insights?metric=follower_count&period=day&since=${w.since}&until=${w.until}&access_token=${t}`),
     isCurrent ? gj(`${GRAPH}/${igId}?fields=followers_count&access_token=${t}`) : Promise.resolve(null),
   ])
@@ -158,6 +163,7 @@ async function fetchInstagram(
   read(views, 'views')
   read(inter, 'interactions')
   read(prof, 'profile_views')
+  read(site, 'bio_clicks')
 
   if (fol?.error) error ??= fol.error.message
   else if (fol?.data?.[0]?.values) {
@@ -191,7 +197,8 @@ export async function getMonthReport(
   const hasSnapshot = Object.keys(snapshot).length > 0
 
   // Mês corrente atualiza de tempos em tempos; mês passado só lê uma vez e fica guardado.
-  const stale = isCurrent ? Date.now() - snapshotAt > REFRESH_MS : !hasSnapshot && !snapshotAt
+  const outdated = snapshot.v !== SNAPSHOT_VERSION
+  const stale = isCurrent ? Date.now() - snapshotAt > REFRESH_MS || outdated : (!hasSnapshot && !snapshotAt) || (hasSnapshot && outdated)
   const token = process.env.FACEBOOK_SYSTEM_TOKEN ?? client.facebook_page_token ?? ''
 
   let igError: string | null = null
@@ -199,7 +206,7 @@ export async function getMonthReport(
     const fresh = await fetchInstagram(client.instagram_account_id.trim(), token, ym, isCurrent)
     igError = fresh.error
     // seguidores totais só valem como foto do próprio mês; não sobrescreve depois que o mês acaba
-    const merged: ReportValues = { ...snapshot, ...fresh.values }
+    const merged: ReportValues = { ...snapshot, ...fresh.values, v: SNAPSHOT_VERSION }
     if (!isCurrent && snapshot.followers_total !== undefined) merged.followers_total = snapshot.followers_total
     snapshot = merged
     // Falha total da API não pode gravar "snapshot vazio feito": o mês passado nunca mais seria relido.
