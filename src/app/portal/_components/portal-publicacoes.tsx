@@ -201,7 +201,7 @@ function ContentCard({ c }: { c: Content }) {
 export default function PortalPublicacoes({ contents }: { contents: Content[] }) {
   const [filter, setFilter] = useState<string>('todos')
 
-  const types = ['todos', ...Array.from(new Set(contents.map(c => c.type)))]
+  const types = [...Array.from(new Set(contents.map(c => c.type))), 'todos']
 
   const filtered = filter === 'todos' ? contents : contents.filter(c => c.type === filter)
 
