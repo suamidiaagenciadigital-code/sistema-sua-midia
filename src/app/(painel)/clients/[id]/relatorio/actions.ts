@@ -2,13 +2,13 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { AD_FIELDS, IG_FIELDS, isValidMonth } from '@/lib/portal-report'
+import { AD_FIELDS, GOOGLE_FIELDS, IG_FIELDS, isValidMonth } from '@/lib/portal-report'
 
 export async function saveReportAction(clientId: string, month: string, formData: FormData) {
   if (!isValidMonth(month)) return
 
   const overrides: Record<string, number | string> = {}
-  for (const f of [...IG_FIELDS, ...AD_FIELDS]) {
+  for (const f of [...IG_FIELDS, ...AD_FIELDS, ...GOOGLE_FIELDS]) {
     const raw = String(formData.get(`ov_${f.key}`) ?? '').trim()
     if (raw === '') continue
     const n = Number(raw.replace(/\./g, '').replace(',', '.'))

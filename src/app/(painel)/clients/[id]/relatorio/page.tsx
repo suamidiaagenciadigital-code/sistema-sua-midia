@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import {
-  AD_FIELDS, IG_FIELDS, currentMonth, getMonthReport, isValidMonth, monthLabel, shiftMonth, type NumKey,
+  AD_FIELDS, GOOGLE_FIELDS, IG_FIELDS, currentMonth, getMonthReport, isValidMonth, monthLabel, shiftMonth, type NumKey,
 } from '@/lib/portal-report'
 import { saveReportAction } from './actions'
 
@@ -98,9 +98,15 @@ export default async function RelatorioPage({ params, searchParams }: Props) {
         </section>
 
         <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
-          <h2 className="text-sm font-semibold text-white mb-1">Anúncios</h2>
+          <h2 className="text-sm font-semibold text-white mb-1">Anúncios no Instagram e Facebook (Meta)</h2>
           <p className="text-xs text-zinc-500 mb-3">Sem leitura automática. Preencha o que se aplica: campanha de mensagem usa “Conversas no WhatsApp”, campanha de tráfego usa “Cliques no link”. Campo vazio não aparece pro cliente.</p>
           {AD_FIELDS.map((f) => numRow(f, f.key === 'ads_spend'))}
+        </section>
+
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5">
+          <h2 className="text-sm font-semibold text-white mb-1">Google Ads</h2>
+          <p className="text-xs text-zinc-500 mb-3">Preenchimento manual. Campo vazio não aparece pro cliente.</p>
+          {GOOGLE_FIELDS.map((f) => numRow(f, f.key === 'google_spend'))}
         </section>
 
         <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-3">

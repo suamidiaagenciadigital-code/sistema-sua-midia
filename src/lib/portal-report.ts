@@ -20,7 +20,16 @@ export const AD_FIELDS = [
   { key: 'ads_site_clicks', label: 'Cliques no link / visitas ao site', hint: 'Campanhas de tráfego' },
 ] as const
 
-export type NumKey = (typeof IG_FIELDS)[number]['key'] | (typeof AD_FIELDS)[number]['key']
+export const GOOGLE_FIELDS = [
+  { key: 'google_spend', label: 'Investido no Google Ads (R$)', hint: '' },
+  { key: 'google_clicks', label: 'Cliques no anúncio', hint: 'Pessoas que foram para o site' },
+  { key: 'google_whatsapp', label: 'Conversas no WhatsApp', hint: 'Conversões: quem chamou no WhatsApp a partir do site' },
+] as const
+
+export type NumKey =
+  | (typeof IG_FIELDS)[number]['key']
+  | (typeof AD_FIELDS)[number]['key']
+  | (typeof GOOGLE_FIELDS)[number]['key']
 
 export interface TopPost {
   caption: string

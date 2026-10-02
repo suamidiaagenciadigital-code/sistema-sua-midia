@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { AD_FIELDS, IG_FIELDS, type MonthReport, type NumKey } from '@/lib/portal-report'
+import { AD_FIELDS, GOOGLE_FIELDS, IG_FIELDS, type MonthReport, type NumKey } from '@/lib/portal-report'
 
 function fmt(n: number): string {
   return n.toLocaleString('pt-BR')
@@ -76,6 +76,7 @@ interface Props {
 
 export default function PortalResumo({ cur, prev, curLabel, prevLabel, upcoming, pendingApprovals, approvalToken, hasInstagram }: Props) {
   const hasAds = AD_FIELDS.some((f) => cur.values[f.key] !== undefined)
+  const hasGoogle = GOOGLE_FIELDS.some((f) => cur.values[f.key] !== undefined)
   const igCards = IG_FIELDS.filter((f) => cur.values[f.key] !== undefined)
   const top = cur.values.top_post
 
@@ -124,7 +125,7 @@ export default function PortalResumo({ cur, prev, curLabel, prevLabel, upcoming,
       </Section>
 
       {hasAds && (
-        <Section title="Resultados dos anúncios">
+        <Section title="Anúncios no Instagram e Facebook">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {cur.values.ads_spend !== undefined && <Card label="Investido" value={fmtMoney(cur.values.ads_spend)} cur={cur.values.ads_spend} prev={prev.values.ads_spend} />}
             {cur.values.ads_reach !== undefined && <Card label="Alcance" value={fmt(cur.values.ads_reach)} cur={cur.values.ads_reach} prev={prev.values.ads_reach} />}
@@ -144,6 +145,32 @@ export default function PortalResumo({ cur, prev, curLabel, prevLabel, upcoming,
                 cur={cur.values.ads_site_clicks}
                 prev={prev.values.ads_site_clicks}
                 sub={perResult(cur.values.ads_spend, cur.values.ads_site_clicks, 'clique')}
+              />
+            )}
+          </div>
+        </Section>
+      )}
+
+      {hasGoogle && (
+        <Section title="Anúncios no Google">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {cur.values.google_spend !== undefined && <Card label="Investido" value={fmtMoney(cur.values.google_spend)} cur={cur.values.google_spend} prev={prev.values.google_spend} />}
+            {cur.values.google_clicks !== undefined && (
+              <Card
+                label="Cliques no anúncio"
+                value={fmt(cur.values.google_clicks)}
+                cur={cur.values.google_clicks}
+                prev={prev.values.google_clicks}
+                sub={perResult(cur.values.google_spend, cur.values.google_clicks, 'clique')}
+              />
+            )}
+            {cur.values.google_whatsapp !== undefined && (
+              <Card
+                label="Conversas no WhatsApp"
+                value={fmt(cur.values.google_whatsapp)}
+                cur={cur.values.google_whatsapp}
+                prev={prev.values.google_whatsapp}
+                sub={perResult(cur.values.google_spend, cur.values.google_whatsapp, 'conversa')}
               />
             )}
           </div>
