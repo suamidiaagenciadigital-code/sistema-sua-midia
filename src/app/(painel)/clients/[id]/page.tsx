@@ -190,6 +190,23 @@ export default async function ClientPage({ params }: Props) {
         <ChevronLeft className="h-4 w-4 text-zinc-500 rotate-180" />
       </Link>
 
+      {/* Resumo do portal */}
+      <Link
+        href={`/clients/${id}/relatorio`}
+        className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 px-5 py-4 hover:border-zinc-600 hover:bg-zinc-800/50 transition-colors group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-zinc-800 group-hover:bg-zinc-700 flex items-center justify-center transition-colors">
+            <Plug className="h-4 w-4 text-zinc-400 group-hover:text-white transition-colors" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-white">Resumo do portal</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Números do mês, anúncios e recado que o cliente vê</p>
+          </div>
+        </div>
+        <ChevronLeft className="h-4 w-4 text-zinc-500 rotate-180" />
+      </Link>
+
       {/* Portal do Cliente */}
       <PortalAccessSection
         clientId={id}
