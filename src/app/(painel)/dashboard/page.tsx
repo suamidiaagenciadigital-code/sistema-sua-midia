@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Users, Clock, CalendarCheck, MessageSquare, AlertTriangle } from 'lucide-react'
+import { Users, Clock, CalendarCheck, AlertTriangle } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -9,7 +9,6 @@ export default async function DashboardPage() {
     { count: totalClients },
     { count: pendingApprovals },
     { count: scheduledThisWeek },
-    { count: openTickets },
     { data: nextContents },
     { data: firstClient },
     { data: driveIssues },
@@ -21,7 +20,6 @@ export default async function DashboardPage() {
       .in('status', ['approved_by_me', 'approved_by_client'])
       .gte('scheduled_date', new Date().toISOString().split('T')[0])
       .lte('scheduled_date', new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]),
-    supabase.from('support_tickets').select('*', { count: 'exact', head: true }).eq('status', 'open'),
     supabase.from('contents')
       .select('id, title, type, status, scheduled_date, clients(name)')
       .eq('status', 'pending_my_approval')
@@ -74,14 +72,6 @@ export default async function DashboardPage() {
       iconColor: '#34d399',
       border: 'rgba(52,211,153,0.25)',
     },
-    {
-      label: 'Atendimentos abertos',
-      value: openTickets ?? 0,
-      icon: MessageSquare,
-      gradient: 'from-purple-500/20 to-purple-600/10',
-      iconColor: '#A855F7',
-      border: 'rgba(168,85,247,0.25)',
-    },
   ]
 
   const typeLabel: Record<string, string> = {
@@ -96,7 +86,6 @@ export default async function DashboardPage() {
     { label: 'Novo cliente', href: '/clients/new' },
     { label: 'Ver clientes', href: '/clients' },
     { label: 'Ver calendário', href: calendarHref },
-    { label: 'Atendimento', href: '/support' },
   ]
 
   return (
@@ -108,7 +97,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Cards de métricas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {metrics.map(({ label, value, icon: Icon, iconColor, border }) => (
           <div
             key={label}
@@ -135,7 +124,7 @@ export default async function DashboardPage() {
         style={{ backgroundColor: '#131b2e', border: '1px solid rgba(255,255,255,0.08)' }}
       >
         <h2 className="text-sm font-semibold text-white mb-4">Atalhos rápidos</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {quickActions.map(({ label, href }) => (
             <Link
               key={label}

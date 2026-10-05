@@ -7,8 +7,6 @@ import {
   LayoutDashboard,
   Users,
   CheckSquare,
-  MessageSquare,
-  Megaphone,
   FileText,
   Settings,
   X,
@@ -19,8 +17,6 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/clients', label: 'Clientes', icon: Users },
   { href: '/approvals', label: 'Aprovações', icon: CheckSquare },
-  { href: '/support', label: 'Atendimento', icon: MessageSquare },
-  { href: '/ads', label: 'Anúncios', icon: Megaphone },
   { href: '/propostas', label: 'Propostas', icon: FileText },
   { href: '/settings', label: 'Configurações', icon: Settings },
 ]
