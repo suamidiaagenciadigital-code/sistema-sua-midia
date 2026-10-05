@@ -196,6 +196,32 @@ async function publishFacebookVideoStory(
   return { post_id: null, error: finish.error?.message ?? 'Falha ao publicar o story (fase finish)' }
 }
 
+// Story de foto no Facebook: um POST direto com url em /photo_stories devolve
+// "An unknown error has occurred" (code 1) para qualquer página — o fluxo que a
+// Meta documenta é subir a foto SEM publicar e criar o story com o photo_id.
+// Validado em 2026-10-05 na página da Sua Mídia.
+async function publishFacebookPhotoStory(
+  pageId: string,
+  photoUrl: string,
+  pageToken: string,
+): Promise<{ post_id: string | null; error: string | null }> {
+  const photo = await postForm(`${GRAPH}/${pageId}/photos`, {
+    url: photoUrl,
+    published: 'false',
+    access_token: pageToken,
+  })
+  if (!photo.id) {
+    return { post_id: null, error: photo.error?.message ?? 'Falha ao enviar a foto do story (etapa 1)' }
+  }
+  const story = await postForm(`${GRAPH}/${pageId}/photo_stories`, {
+    photo_id: photo.id,
+    access_token: pageToken,
+  })
+  const postId = story.post_id ?? story.id ?? null
+  if (postId) return { post_id: postId, error: null }
+  return { post_id: null, error: story.error?.message ?? 'Falha ao publicar o story (etapa 2)' }
+}
+
 // Troca o System User Token por um Page Access Token (necessário para /photos e /feed)
 async function getPageAccessToken(pageId: string, systemUserToken: string): Promise<string> {
   const resp = await fetch(`${GRAPH}/${pageId}?fields=access_token&access_token=${systemUserToken}`)
@@ -306,12 +332,9 @@ export async function POST(
           if (res.error && !fbPostId) fbError = res.error
           continue
         }
-        const fbResp = await postForm(`${GRAPH}/${client.facebook_page_id}/photo_stories`, {
-          url: resolved,
-          access_token: fbPageToken,
-        })
-        if (fbResp.post_id || fbResp.id) fbPostId = fbResp.post_id || fbResp.id
-        if (fbResp.error && !fbPostId) fbError = fbResp.error.message
+        const res = await publishFacebookPhotoStory(client.facebook_page_id, resolved, fbPageToken)
+        if (res.post_id) fbPostId = res.post_id
+        if (res.error && !fbPostId) fbError = res.error
       }
     } else if (type === 'reel') {
       const fbResp = await postForm(`${GRAPH}/${client.facebook_page_id}/videos`, {
