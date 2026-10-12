@@ -33,6 +33,8 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith('/approve/') ||
     pathname.startsWith('/propostas/') ||
+    pathname === '/termos' ||
+    pathname === '/privacidade' ||
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/public-approval') ||
     pathname.startsWith('/api/download') ||

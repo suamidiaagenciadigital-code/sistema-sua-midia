@@ -12,6 +12,13 @@ export async function GET(req: NextRequest) {
   if (!clientId || !/^[0-9a-f-]{36}$/i.test(clientId)) {
     return NextResponse.json({ error: 'Cliente inválido' }, { status: 400 })
   }
+  // O cookie de segurança só volta para o mesmo endereço onde o fluxo começou,
+  // e o TikTok devolve para o domínio oficial: começa sempre por ele.
+  const canonical = new URL(tiktokRedirectUri())
+  if (req.nextUrl.host !== canonical.host) {
+    return NextResponse.redirect(new URL(`/api/tiktok/connect?cliente=${clientId}`, canonical.origin))
+  }
+
   const keys = tiktokKeys()
   if (!keys) {
     return NextResponse.redirect(new URL(`/clients/${clientId}/integrations?tiktok=sem_chaves`, req.url))

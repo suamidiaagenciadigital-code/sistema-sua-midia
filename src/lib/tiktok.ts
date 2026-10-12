@@ -12,7 +12,10 @@ export const TIKTOK_API = 'https://open.tiktokapis.com/v2'
 export const TIKTOK_SCOPES = 'user.info.basic,video.publish'
 
 export function tiktokRedirectUri(): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://sistema-sua-midia.vercel.app'
+  // Domínio oficial do sistema. Precisa ser idêntico ao Redirect URI cadastrado
+  // no app do TikTok (por isso não usa NEXT_PUBLIC_APP_URL, que pode apontar
+  // para o endereço da Vercel).
+  const base = process.env.TIKTOK_REDIRECT_BASE ?? 'https://sistema.suamidia.com.br'
   return `${base.replace(/\/$/, '')}/api/tiktok/callback`
 }
 
