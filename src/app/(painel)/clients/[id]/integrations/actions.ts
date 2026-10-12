@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function updateIntegrationsAction(id: string, formData: FormData) {
   const supabase = await createClient()
@@ -13,5 +13,10 @@ export async function updateIntegrationsAction(id: string, formData: FormData) {
     drive_folder_id:      formData.get('drive_folder_id') as string || null,
   }).eq('id', id)
 
+  revalidatePath(`/clients/${id}/integrations`)
+}
+
+export async function disconnectTikTokAction(id: string) {
+  await createServiceClient().from('tiktok_connections').delete().eq('client_id', id)
   revalidatePath(`/clients/${id}/integrations`)
 }

@@ -546,11 +546,13 @@ export function ContentEditForm({
   clientName,
   contentId,
   content,
+  tiktokConnected = false,
 }: {
   clientId: string
   clientName: string
   contentId: string
   content: ContentData
+  tiktokConnected?: boolean
 }) {
   const update = updateContentAction.bind(null, clientId, contentId)
   const [showPrompts, setShowPrompts] = useState(!!(content.image_prompt))
@@ -632,6 +634,32 @@ export function ContentEditForm({
       setPublishResult({ ok: false, msg: e instanceof Error ? e.message : 'Erro ao publicar' })
     } finally {
       setPublishing(false)
+    }
+  }
+
+  // TikTok: só vídeo (reel), e só se o cliente tiver o TikTok conectado
+  const [sendingTikTok, setSendingTikTok] = useState(false)
+  const [tiktokResult, setTiktokResult] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  const sendToTikTok = async () => {
+    if (!confirm('Enviar este vídeo para o TikTok agora?')) return
+    setSendingTikTok(true)
+    setTiktokResult(null)
+    try {
+      const res = await fetch(`/api/contents/${contentId}/tiktok`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) throw new Error(data.error ?? 'Erro ao enviar para o TikTok')
+      const visib = data.privacy === 'SELF_ONLY' ? ' (visível só para você — o app ainda não foi auditado)' : ''
+      setTiktokResult({
+        ok: true,
+        msg: data.concluido
+          ? `✅ TikTok: publicado${visib}`
+          : `✅ TikTok: enviado, ainda processando (${data.status})${visib}`,
+      })
+    } catch (e) {
+      setTiktokResult({ ok: false, msg: e instanceof Error ? e.message : 'Erro ao enviar para o TikTok' })
+    } finally {
+      setSendingTikTok(false)
     }
   }
 
@@ -870,7 +898,33 @@ export function ContentEditForm({
                   : <><Send className="h-4 w-4" /> Publicar agora</>
                 }
               </button>
+
+              {tiktokConnected && content.type === 'reel' && (
+                <button
+                  type="button"
+                  onClick={sendToTikTok}
+                  disabled={sendingTikTok}
+                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white border border-cyan-400/40 hover:bg-cyan-400/10 transition-colors disabled:opacity-50"
+                >
+                  {sendingTikTok
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando ao TikTok...</>
+                    : <><Send className="h-4 w-4" /> Enviar para o TikTok</>
+                  }
+                </button>
+              )}
             </div>
+
+            {tiktokResult && (
+              <div
+                className="rounded-xl px-4 py-3 text-xs font-medium"
+                style={tiktokResult.ok
+                  ? { backgroundColor: 'rgba(6,78,59,0.3)', border: '1px solid rgba(52,211,153,0.3)', color: '#34d399' }
+                  : { backgroundColor: 'rgba(127,29,29,0.3)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }
+                }
+              >
+                {tiktokResult.ok ? '' : '✗ '}{tiktokResult.msg}
+              </div>
+            )}
 
             {publishResult && (
               <div

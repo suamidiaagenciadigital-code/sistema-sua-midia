@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ChevronLeft, CalendarDays, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { STATUS_LABEL, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
 import { deleteContentAction } from './actions'
@@ -40,6 +40,11 @@ export default async function ContentDetailPage({ params }: Props) {
   if (!content) notFound()
 
   const { data: client } = await supabase.from('clients').select('name').eq('id', id).single()
+  const { data: tiktok } = await createServiceClient()
+    .from('tiktok_connections')
+    .select('client_id')
+    .eq('client_id', id)
+    .maybeSingle()
 
   const del = deleteContentAction.bind(null, id, contentId)
 
@@ -110,7 +115,7 @@ export default async function ContentDetailPage({ params }: Props) {
       )}
 
       {/* Edição do conteúdo */}
-      <ContentEditForm clientId={id} clientName={client?.name ?? ''} contentId={contentId} content={content} />
+      <ContentEditForm clientId={id} clientName={client?.name ?? ''} contentId={contentId} content={content} tiktokConnected={!!tiktok} />
 
       {/* Ver no calendário */}
       <div
