@@ -16,10 +16,11 @@ export async function resolvePortalClient(cliente?: string): Promise<PortalConte
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/portal/login')
 
-  const role = (user.user_metadata?.role as string | undefined) ?? 'agency'
+  // app_metadata: só o servidor grava (user_metadata é editável pelo próprio usuário)
+  const role = user.app_metadata?.role as string | undefined
 
-  if (role === 'client') {
-    const clientId = user.user_metadata?.client_id as string | undefined
+  if (role !== 'agency') {
+    const clientId = role === 'client' ? (user.app_metadata?.client_id as string | undefined) : undefined
     if (!clientId) redirect('/portal/login')
     return { clientId, isPreview: false }
   }

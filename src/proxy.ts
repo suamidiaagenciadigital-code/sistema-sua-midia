@@ -55,8 +55,11 @@ export async function proxy(request: NextRequest) {
   const isPortalLogin  = pathname === '/portal/login'
   const isAgencyLogin  = pathname === '/login'
 
-  const role = (user?.user_metadata?.role as string | undefined) ?? 'agency'
-  const isClientUser   = role === 'client'
+  // O papel vem de app_metadata, que só o servidor consegue gravar. user_metadata
+  // o próprio usuário edita (supabase.auth.updateUser), então NUNCA serve para
+  // decidir acesso. Sem papel "agency" explícito, trata como cliente (menor privilégio).
+  const role = user?.app_metadata?.role as string | undefined
+  const isClientUser   = role !== 'agency'
 
   // ── Portal do cliente ──────────────────────────────────────────────────
   if (isPortalRoute) {

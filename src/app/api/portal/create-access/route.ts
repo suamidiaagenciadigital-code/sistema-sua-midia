@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   // Somente usuários autenticados da agência podem criar acessos
   const supabaseAuth = await createClient()
   const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user || user.user_metadata?.role === 'client') {
+  if (!user || user.app_metadata?.role !== 'agency') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.auth.admin.updateUserById(client.portal_user_id, {
       email,
       password,
-      user_metadata: { role: 'client', client_id },
+      app_metadata: { role: 'client', client_id }, // só o servidor grava; user_metadata é editável pelo usuário
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     portalUserId = client.portal_user_id
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       email,
       password,
       email_confirm: true,   // confirma automaticamente, sem e-mail de verificação
-      user_metadata: { role: 'client', client_id },
+      app_metadata: { role: 'client', client_id }, // só o servidor grava; user_metadata é editável pelo usuário
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     portalUserId = created.user.id
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const supabaseAuth = await createClient()
   const { data: { user } } = await supabaseAuth.auth.getUser()
-  if (!user || user.user_metadata?.role === 'client') {
+  if (!user || user.app_metadata?.role !== 'agency') {
     return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
   }
 
