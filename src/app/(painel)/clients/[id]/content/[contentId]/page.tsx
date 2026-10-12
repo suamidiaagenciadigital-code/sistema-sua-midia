@@ -46,6 +46,13 @@ export default async function ContentDetailPage({ params }: Props) {
     .eq('client_id', id)
     .maybeSingle()
 
+  // Google Business: consulta separada (as colunas só existem depois da migration_v14)
+  const { data: gbpClient } = await supabase.from('clients').select('gbp_enabled').eq('id', id).single()
+  const gc = content as { publish_to_gbp?: boolean; gbp_status?: string | null; gbp_error?: string | null }
+  const gbpInfo = gbpClient?.gbp_enabled
+    ? { publish: gc.publish_to_gbp !== false, status: gc.gbp_status ?? null, error: gc.gbp_error ?? null }
+    : null
+
   const del = deleteContentAction.bind(null, id, contentId)
 
   const status = content.status as ContentStatus
@@ -115,7 +122,7 @@ export default async function ContentDetailPage({ params }: Props) {
       )}
 
       {/* Edição do conteúdo */}
-      <ContentEditForm clientId={id} clientName={client?.name ?? ''} contentId={contentId} content={content} tiktokConnected={!!tiktok} />
+      <ContentEditForm clientId={id} clientName={client?.name ?? ''} contentId={contentId} content={content} tiktokConnected={!!tiktok} gbp={gbpInfo} />
 
       {/* Ver no calendário */}
       <div

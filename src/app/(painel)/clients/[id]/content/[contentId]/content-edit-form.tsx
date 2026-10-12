@@ -6,6 +6,7 @@ import { updateContentAction } from './actions'
 import { SubmitButton } from '../../../../_components/submit-button'
 import { createClient } from '@/lib/supabase/client'
 import { useDriveRehost } from '@/lib/use-drive-rehost'
+import { adaptPostForGbp } from '@/lib/gbp-text'
 
 // ── Lumina input style ────────────────────────────────────────
 const base = "w-full rounded-lg px-3 py-2.5 text-white text-sm placeholder-slate-600 focus:outline-none transition-colors bg-white/5 border border-white/10"
@@ -547,12 +548,15 @@ export function ContentEditForm({
   contentId,
   content,
   tiktokConnected = false,
+  gbp = null,
 }: {
   clientId: string
   clientName: string
   contentId: string
   content: ContentData
   tiktokConnected?: boolean
+  // Só vem preenchido quando o cliente tem o Google Business ligado
+  gbp?: { publish: boolean; status: string | null; error: string | null } | null
 }) {
   const update = updateContentAction.bind(null, clientId, contentId)
   const [showPrompts, setShowPrompts] = useState(!!(content.image_prompt))
@@ -628,8 +632,10 @@ export function ContentEditForm({
       const ig = data.instagram
       const fbMsg = fb?.post_id ? '✅ Facebook' : `❌ Facebook: ${fb?.error ?? 'erro'}`
       const igMsg = ig?.post_id ? '✅ Instagram' : ig ? `❌ Instagram: ${ig?.error ?? 'erro'}` : ''
-      const allOk = !!fb?.post_id && (!ig || !!ig?.post_id)
-      setPublishResult({ ok: allOk, msg: [fbMsg, igMsg].filter(Boolean).join(' | ') })
+      const g = data.google
+      const gMsg = !g ? '' : g.status === 'published' ? '✅ Google' : g.status === 'skipped' ? `➖ Google: ${g.error ?? 'ignorado'}` : `❌ Google: ${g.error ?? 'erro'}`
+      const allOk = !!fb?.post_id && (!ig || !!ig?.post_id) && g?.status !== 'failed'
+      setPublishResult({ ok: allOk, msg: [fbMsg, igMsg, gMsg].filter(Boolean).join(' | ') })
     } catch (e) {
       setPublishResult({ ok: false, msg: e instanceof Error ? e.message : 'Erro ao publicar' })
     } finally {
@@ -872,6 +878,41 @@ export function ContentEditForm({
                 className={base + ' resize-none'}
               />
             </div>
+
+            {/* Google Business Profile: só imagem única, e só se o cliente tiver o Google ligado */}
+            {gbp && (
+              <div
+                className="rounded-xl p-4 space-y-2"
+                style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <input type="hidden" name="gbp_toggle_present" value="1" />
+                {content.type === 'imagem' ? (
+                  <>
+                    <label className="flex items-center gap-2 text-sm text-white font-medium">
+                      <input type="checkbox" name="publish_to_gbp" defaultChecked={gbp.publish} className="h-4 w-4" />
+                      Publicar também no Google
+                      {gbp.status === 'published' && <span className="text-xs text-emerald-400 font-normal">✓ publicado</span>}
+                      {gbp.status === 'failed' && <span className="text-xs text-red-400 font-normal">✗ falhou</span>}
+                      {gbp.status === 'skipped' && <span className="text-xs text-slate-400 font-normal">ignorado</span>}
+                    </label>
+                    {gbp.error && gbp.status !== 'published' && (
+                      <p className="text-xs text-red-300">{gbp.error}</p>
+                    )}
+                    <div className="space-y-1">
+                      <p className="text-[11px] uppercase tracking-wide text-slate-500">Texto que vai para o Google</p>
+                      <p className="text-xs text-slate-300 whitespace-pre-wrap">
+                        {adaptPostForGbp(caption) || '(vazio: o Google exige texto)'}
+                      </p>
+                      <p className="text-[11px] text-slate-600">Sem hashtags, @, links, telefones e travessão. Máximo de 1500 caracteres.</p>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Google Business: só imagem única é publicada (este post é {content.type}).
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Botões */}
             <div

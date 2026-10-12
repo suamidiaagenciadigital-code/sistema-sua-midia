@@ -3,6 +3,8 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { getMetaToken } from '@/lib/meta-token'
 import { cleanupAfterPublish } from '@/lib/cleanup-media'
 import { findExistingRehost } from '@/lib/rehost-video'
+import { adaptPostForGbp } from '@/lib/gbp-text'
+import { createGbpPost, getGoogleAccessToken } from '@/lib/google-business'
 
 // Publicação pode demorar até 3 min aguardando processamento do vídeo no Instagram
 export const maxDuration = 300
@@ -487,6 +489,91 @@ export async function POST(
     }
   }
 
+  // ── Google Business Profile ──────────────────────────────────────────────
+  // Rede independente: falha aqui não afeta Facebook/Instagram e vice-versa.
+  // Só imagem única vai para o Google (a API não aceita vídeo no post).
+  // Tudo isolado em try/catch e em consultas separadas: se a migration_v14 ainda
+  // não foi aplicada, as colunas não existem e o GBP simplesmente é ignorado.
+  type GbpOutcome = { status: 'published' | 'failed' | 'skipped' | null; post_name: string | null; error: string | null }
+  const gbp: GbpOutcome = { status: null, post_name: null, error: null }
+  try {
+    const { data: gc } = await supabase
+      .from('clients')
+      .select('gbp_enabled, gbp_account_id, gbp_location_id, gbp_cta_type, gbp_cta_url')
+      .eq('id', content.client_id)
+      .single()
+    const { data: gct } = await supabase
+      .from('contents')
+      .select('publish_to_gbp, gbp_post_name')
+      .eq('id', contentId)
+      .single()
+
+    if (gc?.gbp_enabled && gc.gbp_account_id && gc.gbp_location_id && gct) {
+      if (gct.gbp_post_name) {
+        gbp.status = 'published'
+        gbp.post_name = gct.gbp_post_name as string
+      } else if (gct.publish_to_gbp === false) {
+        gbp.status = 'skipped'
+        gbp.error = 'Desligado neste post'
+      } else if (type !== 'imagem') {
+        gbp.status = 'skipped'
+        gbp.error = `Só imagem única vai para o Google (este post é ${type})`
+      } else {
+        const summary = adaptPostForGbp(content.caption as string | null)
+        if (!resolvedImageUrl) {
+          gbp.status = 'failed'; gbp.error = 'Post sem imagem'
+        } else if (!summary) {
+          gbp.status = 'failed'; gbp.error = 'Texto vazio depois de adaptar para o Google'
+        } else {
+          const { token, error: tokenError } = await getGoogleAccessToken()
+          if (!token) {
+            gbp.status = 'failed'; gbp.error = tokenError ?? 'Google não conectado'
+          } else {
+            let res = await createGbpPost(token, {
+              accountId: gc.gbp_account_id as string,
+              locationId: gc.gbp_location_id as string,
+              summary,
+              imageUrl: resolvedImageUrl,
+              ctaType: gc.gbp_cta_type as string | null,
+              ctaUrl: gc.gbp_cta_url as string | null,
+            })
+            // até 3 tentativas, só para erro temporário (429/5xx)
+            for (const wait of [2000, 6000]) {
+              if (res.name || !res.retryable) break
+              await new Promise((r) => setTimeout(r, wait))
+              res = await createGbpPost(token, {
+                accountId: gc.gbp_account_id as string,
+                locationId: gc.gbp_location_id as string,
+                summary,
+                imageUrl: resolvedImageUrl,
+                ctaType: gc.gbp_cta_type as string | null,
+                ctaUrl: gc.gbp_cta_url as string | null,
+              })
+            }
+            if (res.name && res.state !== 'REJECTED') {
+              gbp.status = 'published'; gbp.post_name = res.name
+            } else if (res.name) {
+              gbp.status = 'failed'; gbp.post_name = res.name
+              gbp.error = 'O Google rejeitou o post (política de conteúdo)'
+            } else {
+              gbp.status = 'failed'; gbp.error = res.error
+            }
+          }
+        }
+      }
+
+      await supabase.from('contents').update({
+        gbp_status: gbp.status,
+        gbp_post_name: gbp.post_name,
+        gbp_error: gbp.status === 'published' ? null : gbp.error,
+        ...(gbp.status === 'published' && !gct.gbp_post_name ? { gbp_published_at: new Date().toISOString() } : {}),
+      }).eq('id', contentId)
+    }
+  } catch (e: any) {
+    gbp.status = 'failed'
+    gbp.error = String(e?.message ?? e)
+  }
+
   // ── Atualizar Supabase ────────────────────────────────────────────────────
   const updateData: Record<string, unknown> = { status: 'published' }
   if (fbPostId) updateData.facebook_post_id = fbPostId
@@ -510,8 +597,10 @@ export async function POST(
   const igExpected = !!client.instagram_account_id
   const fbFullyOk = !!fbPostId && !fbError
   const igFullyOk = !igExpected || (!!igPostId && !igError)
+  // Google: se tentou e falhou, mantém o arquivo para o retry (publicado/ignorado liberam)
+  const gbpFullyOk = gbp.status !== 'failed'
   let cleaned = 0
-  if (fbFullyOk && igFullyOk) {
+  if (fbFullyOk && igFullyOk && gbpFullyOk) {
     const { removed } = await cleanupAfterPublish(contentId, supabase)
     cleaned = removed
   }
@@ -520,6 +609,7 @@ export async function POST(
     ok: true,
     facebook: { post_id: fbPostId, error: fbError },
     instagram: { post_id: igPostId, error: igError },
+    google: gbp.status ? { status: gbp.status, post_name: gbp.post_name, error: gbp.error } : null,
     media_liberada: cleaned,
   })
 }

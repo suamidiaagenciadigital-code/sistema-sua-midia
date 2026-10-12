@@ -46,7 +46,14 @@ export async function updateContentAction(clientId: string, contentId: string, f
     } catch { /* ignora JSON inválido */ }
   }
 
+  // O checkbox do Google só existe quando o cliente tem o Google ligado; o campo
+  // oculto avisa que ele estava na tela (desmarcado não envia nada no formulário).
+  const gbpFields = formData.get('gbp_toggle_present') === '1' && type === 'imagem'
+    ? { publish_to_gbp: formData.get('publish_to_gbp') === 'on' }
+    : {}
+
   await supabase.from('contents').update({
+    ...gbpFields,
     title: formData.get('title') as string,
     caption: formData.get('caption') as string,
     script: formData.get('script') as string || null,

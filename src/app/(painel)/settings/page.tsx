@@ -1,9 +1,23 @@
 import { createClient } from '@/lib/supabase/server'
-import { Key, Webhook, MessageCircle } from 'lucide-react'
+import { Key, Webhook, MessageCircle, MapPin } from 'lucide-react'
+import { getGoogleConnection } from '@/lib/google-business'
+import { disconnectGoogleAction } from './actions'
 
-export default async function SettingsPage() {
+const GOOGLE_MSG: Record<string, { ok: boolean; text: string }> = {
+  conectado: { ok: true, text: 'Google conectado.' },
+  negado: { ok: false, text: 'A autorização no Google foi cancelada.' },
+  estado_invalido: { ok: false, text: 'A conexão expirou ou veio de outro navegador. Clique em Conectar de novo.' },
+  sem_refresh: { ok: false, text: 'O Google não devolveu o acesso permanente. Remova o app em myaccount.google.com/permissions e conecte de novo.' },
+  erro_salvar: { ok: false, text: 'Conectou, mas não consegui salvar. Rode a migration_v14 no Supabase.' },
+  sem_chaves: { ok: false, text: 'Faltam GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET nas variáveis da Vercel.' },
+}
+
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ google?: string }> }) {
+  const sp = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const google = await getGoogleConnection()
+  const googleMsg = sp.google ? GOOGLE_MSG[sp.google] : null
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
@@ -24,6 +38,45 @@ export default async function SettingsPage() {
           <p className="text-xs text-zinc-500 uppercase tracking-wide">Usuário autenticado</p>
           <p className="text-sm text-zinc-200">{user?.email ?? '—'}</p>
         </div>
+      </section>
+
+      {/* Google Business Profile */}
+      <section className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-3">
+        <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+          <MapPin className="h-4 w-4 text-zinc-400" />
+          Google Business Profile
+        </h2>
+        <p className="text-xs text-zinc-500">
+          Uma conexão da agência dá acesso a todos os perfis do Google que ela administra. Cada cliente é
+          vinculado ao seu perfil na página de Integrações dele.
+        </p>
+        {googleMsg && (
+          <p className={`text-xs rounded-md px-3 py-2 border ${googleMsg.ok ? 'text-emerald-300 bg-emerald-950/30 border-emerald-800/40' : 'text-amber-300 bg-amber-950/30 border-amber-800/40'}`}>
+            {googleMsg.text}
+          </p>
+        )}
+        {google && !google.invalid ? (
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-sm text-emerald-300">
+              ✓ Conectado desde {new Date(google.created_at).toLocaleDateString('pt-BR')}
+            </span>
+            <div className="flex gap-2">
+              <a href="/api/google/connect" className="rounded-md border border-zinc-700 px-3 py-1.5 text-xs text-zinc-300 hover:text-white">Reconectar</a>
+              <form action={disconnectGoogleAction}>
+                <button type="submit" className="rounded-md border border-red-900/60 px-3 py-1.5 text-xs text-red-400 hover:text-red-300">Desconectar</button>
+              </form>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {google?.invalid && (
+              <p className="text-xs text-amber-300">A conexão expirou ou foi revogada. Conecte de novo.</p>
+            )}
+            <a href="/api/google/connect" className="inline-block rounded-md bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100">
+              Conectar Google
+            </a>
+          </div>
+        )}
       </section>
 
       {/* Variáveis de ambiente */}

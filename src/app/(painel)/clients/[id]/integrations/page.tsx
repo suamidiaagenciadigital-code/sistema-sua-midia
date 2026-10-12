@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ChevronLeft, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Client } from '@/lib/types'
-import { updateIntegrationsAction, disconnectTikTokAction } from './actions'
+import { updateIntegrationsAction, disconnectTikTokAction, saveGbpAction } from './actions'
+import { GBP_CTA_TYPES, getGoogleAccessToken, getGoogleConnection, listGbpLocations, type GbpLocation } from '@/lib/google-business'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -37,6 +38,25 @@ export default async function IntegrationsPage({ params, searchParams }: Props) 
     .maybeSingle()
   const disconnectTikTok = disconnectTikTokAction.bind(null, id)
   const ttMsg = sp.tiktok ? TIKTOK_MSG[sp.tiktok] : null
+
+  // Google Business Profile: lista os perfis que a conta da agência administra
+  const gConn = await getGoogleConnection()
+  let gLocations: GbpLocation[] = []
+  let gError: string | null = null
+  if (gConn && !gConn.invalid) {
+    const { token, error } = await getGoogleAccessToken()
+    if (token) {
+      const r = await listGbpLocations(token)
+      gLocations = r.locations
+      gError = r.error ?? null
+    } else gError = error ?? null
+  }
+  const saveGbp = saveGbpAction.bind(null, id)
+  const gc = c as Client & {
+    gbp_account_id?: string | null; gbp_location_id?: string | null; gbp_location_title?: string | null
+    gbp_enabled?: boolean; gbp_cta_type?: string; gbp_cta_url?: string | null
+  }
+  const gCurrent = gc.gbp_account_id && gc.gbp_location_id ? `${gc.gbp_account_id}|${gc.gbp_location_id}|${gc.gbp_location_title ?? ''}` : ''
 
   const hasFacebook =!!c.facebook_page_id && !!c.facebook_page_token
   const hasInstagram = !!c.instagram_account_id
@@ -155,6 +175,75 @@ export default async function IntegrationsPage({ params, searchParams }: Props) 
               Conectar TikTok
             </a>
           </div>
+        )}
+      </div>
+
+      {/* Google Business Profile — também fora do formulário principal */}
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-5 space-y-3">
+        <div className="flex items-center gap-2 pb-1 border-b border-zinc-800">
+          <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current text-amber-400"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.3 7 13 7 13s7-7.7 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+          <h2 className="text-sm font-semibold text-white">Google Business Profile</h2>
+        </div>
+
+        {!gConn || gConn.invalid ? (
+          <p className="text-xs text-zinc-500">
+            Conecte o Google da agência em <Link href="/settings" className="text-blue-400 underline">Configurações</Link> para vincular o perfil deste cliente.
+          </p>
+        ) : (
+          <form action={saveGbp} className="space-y-3">
+            {gError && <p className="text-xs text-amber-300">Não consegui listar os perfis: {gError}</p>}
+            <div className="space-y-1">
+              <label className="text-sm text-zinc-300 font-medium">Perfil no Google</label>
+              <select
+                name="gbp_location"
+                defaultValue={gCurrent}
+                className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-zinc-500"
+              >
+                <option value="">Nenhum (não publicar no Google)</option>
+                {gLocations.map((l) => (
+                  <option key={`${l.accountId}|${l.locationId}`} value={`${l.accountId}|${l.locationId}|${l.title}`}>
+                    {l.title}
+                  </option>
+                ))}
+                {gCurrent && !gLocations.some((l) => `${l.accountId}|${l.locationId}|${l.title}` === gCurrent) && (
+                  <option value={gCurrent}>{gc.gbp_location_title ?? gc.gbp_location_id} (atual)</option>
+                )}
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-zinc-200">
+              <input type="checkbox" name="gbp_enabled" defaultChecked={!!gc.gbp_enabled} className="h-4 w-4" />
+              Publicar no Google as imagens deste cliente
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[10rem_1fr] gap-3">
+              <div className="space-y-1">
+                <label className="text-sm text-zinc-300 font-medium">Botão do post</label>
+                <select
+                  name="gbp_cta_type"
+                  defaultValue={gc.gbp_cta_type ?? 'LEARN_MORE'}
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white text-sm"
+                >
+                  {GBP_CTA_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-zinc-300 font-medium">Link do botão</label>
+                <input
+                  type="text"
+                  name="gbp_cta_url"
+                  defaultValue={gc.gbp_cta_url ?? ''}
+                  placeholder="https://site-do-cliente.com.br ou https://wa.me/55..."
+                  className="w-full rounded-md border border-zinc-700 bg-zinc-800 px-3 py-2 text-white placeholder-zinc-600 text-sm"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500">Sem link, o post sai sem botão. &quot;CALL&quot; usa o telefone do perfil e não precisa de link.</p>
+
+            <button type="submit" className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-100">
+              Salvar Google
+            </button>
+          </form>
         )}
       </div>
 
