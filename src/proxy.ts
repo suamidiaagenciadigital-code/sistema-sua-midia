@@ -34,8 +34,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/approve/') ||
     pathname.startsWith('/propostas/') ||
     pathname === '/termos' ||
-    // arquivo de verificação de domínio do TikTok (public/tiktok*.txt)
-    /^\/tiktok[\w-]+\.txt$/.test(pathname) ||
+    // arquivos de verificação de URL do TikTok (public/<pagina>/tiktok*.txt)
+    /^\/(termos|privacidade)\/tiktok[\w-]+\.txt$/.test(pathname) ||
     pathname === '/privacidade' ||
     pathname.startsWith('/api/webhooks/') ||
     pathname.startsWith('/api/public-approval') ||
