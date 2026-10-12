@@ -72,7 +72,13 @@ export async function POST(
     return fail(contentId, explain(creator.error.code, creator.error.message))
   }
   const options: string[] = creator?.data?.privacy_level_options ?? []
-  const privacy = options.includes('PUBLIC_TO_EVERYONE') ? 'PUBLIC_TO_EVERYONE' : options[0] ?? 'SELF_ONLY'
+  // Enquanto o app não for auditado o TikTok só aceita SELF_ONLY (e recusa
+  // qualquer outro nível mesmo que a lista de opções o ofereça). Depois da
+  // auditoria, definir TIKTOK_AUDITED=true na Vercel.
+  const audited = process.env.TIKTOK_AUDITED === 'true'
+  const privacy = !audited
+    ? 'SELF_ONLY'
+    : options.includes('PUBLIC_TO_EVERYONE') ? 'PUBLIC_TO_EVERYONE' : options[0] ?? 'SELF_ONLY'
 
   // 2) Baixa o vídeo
   const file = await fetch(videoUrl, { signal: AbortSignal.timeout(120_000) })
