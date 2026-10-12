@@ -9,6 +9,7 @@ const MAX = 1500
 export function adaptPostForGbp(caption: string | null | undefined): string {
   let t = (caption ?? '').replace(/\r\n/g, '\n')
 
+  t = t.replace(/\*\*(.+?)\*\*|__(.+?)__/gs, '$1$2').replace(/\*/g, '') // negrito/itálico em markdown: o Google mostra os asteriscos
   t = t.replace(/https?:\/\/\S+|www\.\S+/gi, '')                   // links
   t = t.replace(/(?:\+?55\s?)?\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}/g, '') // telefones BR
   t = t.replace(/(^|\s)@[\w.]+/g, '$1')                            // menções
