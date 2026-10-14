@@ -42,6 +42,7 @@ async function processJsonFile(
   dayFiles: DriveFile[],
   scheduledDate: string,
   supabase: ReturnType<typeof createServiceClient>,
+  autoApprove = false,
 ): Promise<{ status: 'imported' | 'skipped' | 'error'; reason?: string; contentId?: string }> {
   let parsed: DayPostJson
   try {
@@ -110,7 +111,11 @@ async function processJsonFile(
       // automaticamente quando o cliente aprova qualquer post do mesmo dia
       // (ver src/app/api/public-approval/route.ts). Não vai para a tela de
       // aprovação individual — só os demais tipos vão direto pro cliente.
-      status: parsed.type === 'story' ? 'scheduled' : 'sent_to_client',
+      //
+      // Cliente com aprovação automática (clients.drive_auto_approve — hoje só a
+      // Sua Mídia): tudo entra já aprovado, story incluso, e vai direto para a
+      // fila do cron de publicação (que só pega approved_by_client).
+      status: autoApprove ? 'approved_by_client' : parsed.type === 'story' ? 'scheduled' : 'sent_to_client',
       requires_client_approval: false,
       generated_image_url: generatedImageUrl,
       media_urls: mediaUrls,
@@ -145,6 +150,12 @@ export async function GET(req: NextRequest) {
     .from('clients')
     .select('id, name, drive_folder_id')
     .not('drive_folder_id', 'is', null)
+
+  // Aprovação automática: consulta separada e tolerante — se a migration_v16 ainda
+  // não foi aplicada a coluna não existe, e o importador segue normal (ninguém é
+  // aprovado automaticamente).
+  const { data: autoRows } = await supabase.from('clients').select('id').eq('drive_auto_approve', true)
+  const autoApproveIds = new Set((autoRows ?? []).map((r: { id: string }) => r.id))
 
   // Clientes em paralelo — o tempo todo é dominado por chamadas ao Drive, e
   // um scan sequencial de vários clientes já estourou o timeout do
@@ -236,7 +247,7 @@ export async function GET(req: NextRequest) {
 
           let result: Awaited<ReturnType<typeof processJsonFile>>
           try {
-            result = await processJsonFile(client, jsonFile, dayFiles, scheduledDate, supabase)
+            result = await processJsonFile(client, jsonFile, dayFiles, scheduledDate, supabase, autoApproveIds.has(client.id))
           } catch (e: any) {
             result = { status: 'error', reason: e.message }
           }
