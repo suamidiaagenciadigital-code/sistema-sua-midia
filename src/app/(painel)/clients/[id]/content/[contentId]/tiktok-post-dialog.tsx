@@ -53,7 +53,11 @@ export function TikTokPostDialog({
   const [info, setInfo] = useState<CreatorInfo | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [title, setTitle] = useState(defaultTitle.slice(0, 2200))
+  // A legenda do Instagram pode trazer negrito em markdown (**texto**), que o
+  // TikTok mostraria com os asteriscos. O título continua editável.
+  const [title, setTitle] = useState(
+    defaultTitle.replace(/\*\*([\s\S]+?)\*\*|__([\s\S]+?)__/g, '$1$2').replace(/\*/g, '').trim().slice(0, 2200),
+  )
   const [privacy, setPrivacy] = useState('') // sem padrão: a pessoa escolhe
   const [comment, setComment] = useState(false)
   const [duet, setDuet] = useState(false)
