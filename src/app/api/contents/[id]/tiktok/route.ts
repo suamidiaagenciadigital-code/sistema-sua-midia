@@ -37,11 +37,27 @@ function explain(code: string | undefined, message: string | undefined): string 
 }
 
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: contentId } = await params
   const supabase = createServiceClient()
+
+  // Escolhas feitas na tela de postagem (exigência do TikTok: a pessoa decide
+  // título, visibilidade, interações e divulgação comercial antes de enviar).
+  const body = await req.json().catch(() => ({})) as {
+    title?: string
+    privacy_level?: string
+    disable_comment?: boolean
+    disable_duet?: boolean
+    disable_stitch?: boolean
+    commercial?: { enabled?: boolean; your_brand?: boolean; branded_content?: boolean }
+  }
+  const yourBrand = !!(body.commercial?.enabled && body.commercial.your_brand)
+  const brandedContent = !!(body.commercial?.enabled && body.commercial.branded_content)
+  if (body.commercial?.enabled && !yourBrand && !brandedContent) {
+    return fail(contentId, 'Marque "Sua marca" ou "Conteúdo de marca" na divulgação comercial.', 400)
+  }
 
   const { data: content } = await supabase
     .from('contents')
@@ -76,9 +92,17 @@ export async function POST(
   // qualquer outro nível mesmo que a lista de opções o ofereça). Depois da
   // auditoria, definir TIKTOK_AUDITED=true na Vercel.
   const audited = process.env.TIKTOK_AUDITED === 'true'
-  const privacy = !audited
-    ? 'SELF_ONLY'
-    : options.includes('PUBLIC_TO_EVERYONE') ? 'PUBLIC_TO_EVERYONE' : options[0] ?? 'SELF_ONLY'
+  const requested = body.privacy_level
+  const privacy = requested ?? 'SELF_ONLY'
+  if (requested && options.length && !options.includes(requested)) {
+    return fail(contentId, 'Essa visibilidade não está disponível para esta conta do TikTok.', 400)
+  }
+  if (!audited && privacy !== 'SELF_ONLY') {
+    return fail(contentId, 'O app do TikTok ainda não foi auditado: por enquanto só dá para publicar como "Somente eu".', 400)
+  }
+  if (brandedContent && privacy === 'SELF_ONLY') {
+    return fail(contentId, 'Conteúdo de marca não pode ser "Somente eu". Escolha outra visibilidade.', 400)
+  }
 
   // 2) Baixa o vídeo
   const file = await fetch(videoUrl, { signal: AbortSignal.timeout(120_000) })
@@ -91,9 +115,17 @@ export async function POST(
   const totalChunks = Math.max(1, Math.floor(size / chunkSize)) // a última parte absorve o resto
 
   // 3) Inicia o envio
-  const title = (content.caption || content.title || '').toString().slice(0, 2200)
+  const title = (body.title ?? content.caption ?? content.title ?? '').toString().slice(0, 2200)
   const init = await tiktokPost('/post/publish/video/init/', token, {
-    post_info: { title, privacy_level: privacy, disable_duet: false, disable_stitch: false, disable_comment: false },
+    post_info: {
+      title,
+      privacy_level: privacy,
+      disable_duet: !!body.disable_duet,
+      disable_stitch: !!body.disable_stitch,
+      disable_comment: !!body.disable_comment,
+      brand_organic_toggle: yourBrand,
+      brand_content_toggle: brandedContent,
+    },
     source_info: { source: 'FILE_UPLOAD', video_size: size, chunk_size: chunkSize, total_chunk_count: totalChunks },
   })
   const publishId: string | undefined = init?.data?.publish_id
