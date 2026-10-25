@@ -1,3 +1,4 @@
+import { LazyVideo } from '@/components/lazy-video'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import { TYPE_LABEL } from '@/lib/content-status'
@@ -172,7 +173,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                   ) : isReel && singleUrl ? (
                     <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                       {isVideoUrl(singleUrl) ? (
-                        <video
+                        <LazyVideo
                           src={withPosterFrame(singleUrl)}
                           controls
                           playsInline
@@ -192,6 +193,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                     <div className="w-full bg-zinc-900" style={{ aspectRatio: '4/5' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
+                        loading="lazy"
                         src={resolveImageUrl(singleUrl)!}
                         alt={c.title}
                         className="w-full h-full object-cover"
@@ -319,7 +321,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                       ) : isReel && singleUrl ? (
                         <div className="w-full bg-black" style={{ position: 'relative', paddingBottom: '177.78%', height: 0, overflow: 'hidden' }}>
                           {isVideoUrl(singleUrl) ? (
-                            <video
+                            <LazyVideo
                               src={withPosterFrame(singleUrl)}
                               controls
                               playsInline
@@ -334,7 +336,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                       ) : singleUrl ? (
                         <div className="w-full bg-zinc-900" style={{ aspectRatio: '4/5' }}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={resolveImageUrl(singleUrl)!} alt={c.title} className="w-full h-full object-cover" />
+                          <img loading="lazy" src={resolveImageUrl(singleUrl)!} alt={c.title} className="w-full h-full object-cover" />
                         </div>
                       ) : null}
 

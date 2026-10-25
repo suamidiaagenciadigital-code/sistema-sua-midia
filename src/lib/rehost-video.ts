@@ -126,7 +126,7 @@ export async function rehostIfDriveVideo(
     const supabase = supabaseEarly
     const { error: uploadError } = await supabase.storage
       .from('media')
-      .upload(path, new Uint8Array(buffer), { contentType: uploadContentType })
+      .upload(path, new Uint8Array(buffer), { contentType: uploadContentType, cacheControl: '31536000' })
 
     if (uploadError) {
       console.error('[rehost-video] Upload error:', uploadError.message)

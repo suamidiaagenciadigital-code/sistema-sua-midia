@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { LazyVideo } from '@/components/lazy-video'
 
 const TYPE_LABEL: Record<string, string> = {
   imagem: 'Imagem',
@@ -111,7 +112,7 @@ function ContentCard({ c }: { c: Content }) {
                 className="w-full h-full border-0"
               />
             ) : (
-              <video
+              <LazyVideo
                 key={currentUrl}
                 src={currentUrl}
                 controls
@@ -123,6 +124,7 @@ function ContentCard({ c }: { c: Content }) {
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
+              loading="lazy"
               src={resolveImageUrl(currentUrl)!}
               alt={c.title ?? ''}
               className="w-full h-full object-cover"
@@ -200,6 +202,8 @@ function ContentCard({ c }: { c: Content }) {
 
 export default function PortalPublicacoes({ contents }: { contents: Content[] }) {
   const [filter, setFilter] = useState<string>('todos')
+  // Mostra 12 por vez: a página carregava TODO o histórico de uma vez
+  const [visible, setVisible] = useState(12)
 
   const ORDER = ['imagem', 'carrossel', 'story', 'reel']
   const present = new Set(contents.map(c => c.type))
@@ -228,7 +232,7 @@ export default function PortalPublicacoes({ contents }: { contents: Content[] })
         {types.map(t => (
           <button
             key={t}
-            onClick={() => setFilter(t)}
+            onClick={() => { setFilter(t); setVisible(12) }}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors border ${
               filter === t
                 ? 'text-white border-blue-500 bg-blue-500/20'
@@ -242,10 +246,21 @@ export default function PortalPublicacoes({ contents }: { contents: Content[] })
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(c => (
+        {filtered.slice(0, visible).map(c => (
           <ContentCard key={c.id} c={c} />
         ))}
       </div>
+
+      {filtered.length > visible && (
+        <div className="flex justify-center pt-6">
+          <button
+            onClick={() => setVisible(v => v + 12)}
+            className="px-5 py-2 rounded-full text-sm font-medium text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition-colors"
+          >
+            Ver mais ({filtered.length - visible})
+          </button>
+        </div>
+      )}
 
       {filtered.length === 0 && (
         <p className="text-slate-500 text-sm text-center py-12">

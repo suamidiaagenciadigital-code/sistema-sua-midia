@@ -119,7 +119,7 @@ async function rehostDriveFileForPublish(
 
     const { error } = await supabase.storage
       .from('media')
-      .upload(path, new Uint8Array(buffer), { contentType: uploadContentType })
+      .upload(path, new Uint8Array(buffer), { contentType: uploadContentType, cacheControl: '31536000' })
 
     if (error) return driveUrl
 

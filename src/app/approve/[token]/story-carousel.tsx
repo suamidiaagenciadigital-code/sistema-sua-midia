@@ -1,5 +1,6 @@
 'use client'
 
+import { LazyVideo } from '@/components/lazy-video'
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -47,7 +48,7 @@ function withPosterFrame(url: string): string {
 function StoryFrame({ url, title }: { url: string; title: string }) {
   if (isVideoUrl(url)) {
     return (
-      <video
+      <LazyVideo
         src={withPosterFrame(url)}
         controls
         playsInline
@@ -62,6 +63,7 @@ function StoryFrame({ url, title }: { url: string; title: string }) {
   if (/drive\.google\.com\/file\/d\//.test(url) && !isVideoUrl(url)) {
     return (
       <img
+        loading="lazy"
         src={resolveImageUrl(url)}
         alt={title}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
@@ -85,6 +87,7 @@ function StoryFrame({ url, title }: { url: string; title: string }) {
   }
   return (
     <img
+      loading="lazy"
       src={resolveImageUrl(url)}
       alt={title}
       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}

@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
   const { error: uploadError } = await db.storage
     .from('media')
-    .upload(path, bytes, { contentType: mime, upsert: true })
+    .upload(path, bytes, { contentType: mime, upsert: true, cacheControl: '31536000' })
 
   if (uploadError) {
     return NextResponse.json({ error: `Erro ao salvar no Supabase: ${uploadError.message}` }, { status: 500 })

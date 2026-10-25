@@ -22,6 +22,7 @@ export function MediaCarousel({ urls }: Props) {
       {/* Imagem atual */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        loading="lazy"
         src={resolveUrl(urls[current])}
         alt={`Slide ${current + 1}`}
         className="w-full h-full object-cover"
