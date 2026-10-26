@@ -110,8 +110,12 @@ export default async function LoginPage({ searchParams }: Props) {
           </form>
         </div>
 
-        <p className="text-center text-xs text-slate-700">
-          Sistema Sua Mídia · Agência Digital
+        <p className="text-center text-xs text-slate-600">
+          Sistema SM · Sua Mídia Agência Digital
+          <span className="mx-1">·</span>
+          <a href="/termos" className="underline hover:text-slate-400">Terms of Service</a>
+          <span className="mx-1">·</span>
+          <a href="/privacidade" className="underline hover:text-slate-400">Privacy Policy</a>
         </p>
       </div>
     </div>

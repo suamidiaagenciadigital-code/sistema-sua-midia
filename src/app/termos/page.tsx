@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Termos de Serviço — Sua Mídia',
-  description: 'Termos de uso do Sistema Sua Mídia.',
+  title: 'Sistema SM Terms of Service',
+  description: 'Terms of Service of Sistema SM (Termos de Serviço do Sistema SM).',
 }
 
 const UPDATED = '12 de outubro de 2026'
@@ -12,13 +12,23 @@ const EMAIL = 'suamidiaagenciadigital@gmail.com'
 export default function TermosPage() {
   return (
     <main className="mx-auto max-w-3xl px-5 py-12 space-y-6 text-slate-300 leading-relaxed">
-      <h1 className="text-3xl font-bold text-white">Termos de Serviço</h1>
-      <p className="text-sm text-slate-500">Sistema Sua Mídia · Agência de Bolso · Atualizado em {UPDATED}</p>
+      <h1 className="text-3xl font-bold text-white">Sistema SM Terms of Service</h1>
+      <p className="text-sm text-slate-500">Termos de Serviço · Sistema SM · Sua Mídia Agência Digital · Atualizado em {UPDATED}</p>
+
+      <section className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-4">
+        <h2 className="text-base font-semibold text-white">Summary in English</h2>
+        <p className="text-sm">
+          Sistema SM is the social media management platform of Sua Mídia Agência Digital. It is used to plan, approve and
+          publish content for the agency&apos;s business clients on Instagram, Facebook, Google Business Profile and TikTok.
+          Each account owner connects only their own accounts, approves what is published, and can disconnect an account at
+          any time. The full terms are below, in Portuguese.
+        </p>
+      </section>
 
       <section className="space-y-2">
         <h2 className="text-xl font-semibold text-white">1. Quem somos</h2>
         <p>
-          O Sistema Sua Mídia é a plataforma de gestão de conteúdo da agência Sua Mídia Agência Digital. Ele
+          O Sistema SM é a plataforma de gestão de conteúdo da agência Sua Mídia Agência Digital. Ele
           serve para planejar, aprovar e publicar conteúdo nas redes sociais dos clientes da agência, e para
           acompanhar os resultados desse conteúdo.
         </p>

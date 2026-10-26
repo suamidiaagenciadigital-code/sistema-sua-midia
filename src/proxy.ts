@@ -33,6 +33,7 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith('/approve/') ||
     pathname.startsWith('/propostas/') ||
+    pathname === '/' ||
     pathname === '/termos' ||
     // arquivos de verificação de URL do TikTok (public/<pagina>/tiktok*.txt)
     /^\/(termos|privacidade)\/tiktok[\w-]+\.txt$/.test(pathname) ||

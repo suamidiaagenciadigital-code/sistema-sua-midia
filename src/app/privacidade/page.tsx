@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Política de Privacidade — Sua Mídia',
-  description: 'Como o Sistema Sua Mídia trata dados pessoais e dados das redes sociais conectadas.',
+  title: 'Sistema SM Privacy Policy',
+  description: 'Privacy Policy of Sistema SM (Política de Privacidade do Sistema SM): how personal data and connected social network data are handled.',
 }
 
 const UPDATED = '12 de outubro de 2026'
@@ -12,8 +12,19 @@ const EMAIL = 'suamidiaagenciadigital@gmail.com'
 export default function PrivacidadePage() {
   return (
     <main className="mx-auto max-w-3xl px-5 py-12 space-y-6 text-slate-300 leading-relaxed">
-      <h1 className="text-3xl font-bold text-white">Política de Privacidade</h1>
-      <p className="text-sm text-slate-500">Sistema Sua Mídia · Agência de Bolso · Atualizado em {UPDATED}</p>
+      <h1 className="text-3xl font-bold text-white">Sistema SM Privacy Policy</h1>
+      <p className="text-sm text-slate-500">Política de Privacidade · Sistema SM · Sua Mídia Agência Digital · Atualizado em {UPDATED}</p>
+
+      <section className="space-y-2 rounded-lg border border-white/10 bg-white/[0.03] p-4">
+        <h2 className="text-base font-semibold text-white">Summary in English</h2>
+        <p className="text-sm">
+          Sistema SM only collects what it needs to run the service: sign-in data, the identifier and display name of the
+          social accounts a user connects, access tokens (stored in a protected environment and used only to publish content
+          approved by the account owner), the content to be published and performance numbers. For TikTok, the app requests
+          only user.info.basic (display name) and video.publish (to post videos the user approves). Data is never sold, and
+          any connected account can be disconnected at any time. The full policy is below, in Portuguese.
+        </p>
+      </section>
 
       <section className="space-y-2">
         <h2 className="text-xl font-semibold text-white">1. Quem é o responsável</h2>
