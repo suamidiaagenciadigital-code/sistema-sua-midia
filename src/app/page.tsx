@@ -36,9 +36,13 @@ export default function HomePage() {
       {/* Cabeçalho */}
       <header className="border-b border-white/10">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-          <div>
-            <p className="text-lg font-bold text-white">Sistema SM</p>
-            <p className="text-xs text-slate-500">by Sua Mídia Agência Digital</p>
+          <div className="flex items-center gap-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Sua Mídia Agência Digital" className="h-10 w-auto" />
+            <div className="hidden border-l border-white/15 pl-4 sm:block">
+              <p className="text-lg font-bold leading-tight text-white">Sistema SM</p>
+              <p className="text-xs text-slate-500">Social media management platform</p>
+            </div>
           </div>
           <nav className="flex items-center gap-3 text-sm">
             <Link href="/portal/login" className="text-slate-400 hover:text-white">Client portal</Link>
@@ -110,7 +114,11 @@ export default function HomePage() {
       {/* Rodapé */}
       <footer className="border-t border-white/10">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-slate-500">
-          <p>© {new Date().getFullYear()} Sua Mídia Agência Digital · Sistema SM</p>
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Sua Mídia Agência Digital" className="h-6 w-auto opacity-80" />
+            <p>© {new Date().getFullYear()} Sua Mídia Agência Digital · Sistema SM</p>
+          </div>
           <div className="flex flex-wrap items-center gap-4">
             <Link href="/termos" className="hover:text-white">Terms of Service</Link>
             <Link href="/privacidade" className="hover:text-white">Privacy Policy</Link>
