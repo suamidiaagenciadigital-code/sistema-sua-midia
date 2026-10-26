@@ -6,6 +6,8 @@ import { STATUS_DOT, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus } from '
 import { ImportCalendarButton } from './import-calendar-button'
 import { DraggableCalendar } from './draggable-calendar'
 import { ClientSwitcher } from './client-switcher'
+import { ApprovalLinkButton } from './approval-link-button'
+import { approvalUrl } from '@/lib/approval-url'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -57,10 +59,10 @@ export default async function CalendarPage({ params, searchParams }: Props) {
   // Token de aprovação para o link de pré-visualização do cliente
   const { data: clientExtra } = await supabase
     .from('clients')
-    .select('approval_token')
+    .select('approval_token, approval_code')
     .eq('id', id)
     .single()
-  const approvalToken = clientExtra?.approval_token ?? null
+  const approvalLink = approvalUrl(clientExtra?.approval_code, clientExtra?.approval_token)
 
   // Buscar conteúdos do mês
   const firstDay  = `${year}-${String(month).padStart(2, '0')}-01`
@@ -145,18 +147,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
           </Link>
 
           {/* Link de aprovação do cliente */}
-          {approvalToken && (
-            <a
-              href={`/approve/${approvalToken}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:text-white transition-colors"
-              style={{ border: '1px solid rgba(255,255,255,0.1)', backgroundColor: 'rgba(255,255,255,0.04)' }}
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              Aprovação
-            </a>
-          )}
+          {approvalLink && <ApprovalLinkButton url={approvalLink} />}
 
           {/* Importar calendário */}
           <ImportCalendarButton clientId={id} />
