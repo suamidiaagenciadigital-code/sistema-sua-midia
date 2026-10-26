@@ -1,3 +1,4 @@
+import { approvalUrl } from '@/lib/approval-url'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
 
   const { data: client } = await supabase
     .from('clients')
-    .select('id, name, whatsapp_group_jid, approval_token')
+    .select('*')
     .eq('id', clientId)
     .single()
 
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     client,
     groupJid: client.whatsapp_group_jid,
     approvalToken: client.approval_token,
-    approvalUrl: `https://sistema-sua-midia.vercel.app/approve/${client.approval_token}`,
+    approvalUrl: approvalUrl(client.approval_code, client.approval_token),
     contents: mapped,
   })
 }

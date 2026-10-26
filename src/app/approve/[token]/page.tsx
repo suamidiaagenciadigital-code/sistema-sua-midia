@@ -65,16 +65,21 @@ function formatDate(d: string) {
 }
 
 export default async function PublicApprovalPage({ params }: Props) {
-  const { token } = await params
+  const { token: urlKey } = await params
   const supabase = createServiceClient()
 
+  // O link pode trazer o UUID (antigo) ou o código curto (approval_code). Um
+  // código curto num filtro de coluna uuid daria erro, por isso a busca depende do formato.
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(urlKey)
   const { data: client } = await supabase
     .from('clients')
-    .select('id, name, niche')
-    .eq('approval_token', token)
+    .select('id, name, niche, approval_token')
+    .eq(isUuid ? 'approval_token' : 'approval_code', urlKey)
     .single()
 
   if (!client) notFound()
+  // As ações da página (aprovar/pedir ajuste) validam pelo UUID real
+  const token = client.approval_token as string
 
   const { data: contents } = await supabase
     .from('contents')

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Send, ExternalLink, Copy, Check } from 'lucide-react'
 import { dispararAprovacaoAction } from './actions'
+import { approvalUrl as buildApprovalUrl } from '@/lib/approval-url'
 
 function getWeekDates() {
   const today = new Date()
@@ -15,8 +16,16 @@ function getWeekDates() {
   return { weekStart: fmt(monday), weekEnd: fmt(sunday) }
 }
 
-export function DispatchApprovalButton({ clientId, approvalToken }: { clientId: string; approvalToken: string | null }) {
-  const previewUrl = approvalToken ? `https://sistema-sua-midia.vercel.app/approve/${approvalToken}` : null
+export function DispatchApprovalButton({ clientId, approvalToken, approvalCode }: { clientId: string; approvalToken: string | null; approvalCode?: string | null }) {
+  // Link curto: o UUID do approval_token é lido como chave Pix pelo WhatsApp
+  const previewUrl = buildApprovalUrl(approvalCode, approvalToken)
+  const [linkCopied, setLinkCopied] = useState(false)
+  async function copyLink() {
+    if (!previewUrl) return
+    await navigator.clipboard.writeText(previewUrl)
+    setLinkCopied(true)
+    setTimeout(() => setLinkCopied(false), 2000)
+  }
   const defaults = getWeekDates()
   const [weekStart, setWeekStart] = useState(defaults.weekStart)
   const [weekEnd, setWeekEnd] = useState(defaults.weekEnd)
@@ -65,6 +74,15 @@ export function DispatchApprovalButton({ clientId, approvalToken }: { clientId: 
           </a>
         )}
       </div>
+
+      {previewUrl && (
+        <div className="flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-2">
+          <span className="text-xs text-zinc-300 truncate flex-1 font-mono">{previewUrl}</span>
+          <button type="button" onClick={copyLink} className="flex items-center gap-1 text-xs text-zinc-300 hover:text-white flex-shrink-0">
+            {linkCopied ? <><Check className="h-3.5 w-3.5 text-green-400" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar link de aprovação</>}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-3 items-end">
         <div className="space-y-1">

@@ -165,7 +165,7 @@ export default async function ClientPage({ params }: Props) {
         </div>
       </form>
 
-      <DispatchApprovalButton clientId={id} approvalToken={c.approval_token ?? null} />
+      <DispatchApprovalButton clientId={id} approvalToken={c.approval_token ?? null} approvalCode={(c as { approval_code?: string | null }).approval_code ?? null} />
 
       {/* Integrações Meta */}
       <Link

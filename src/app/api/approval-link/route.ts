@@ -1,3 +1,4 @@
+import { approvalUrl } from '@/lib/approval-url'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -8,12 +9,11 @@ export async function GET(req: NextRequest) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('clients')
-    .select('approval_token')
+    .select('*')
     .eq('id', clientId)
     .single()
 
   if (!data) return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
 
-  const origin = req.nextUrl.origin
-  return NextResponse.json({ link: `${origin}/approve/${data.approval_token}` })
+  return NextResponse.json({ link: approvalUrl(data.approval_code, data.approval_token) })
 }
