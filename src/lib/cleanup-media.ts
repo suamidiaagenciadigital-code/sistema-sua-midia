@@ -75,6 +75,24 @@ export async function cleanupAfterPublish(
 
     if (toDelete.length === 0) return noop
 
+    // Arquivo compartilhado: o mesmo vídeo pode estar em outro post que ainda não
+    // foi publicado (ex.: reel e story do dia usam o mesmo arquivo do Drive).
+    // Esse post continua a apontar para a cópia, então ela não pode ser apagada
+    // aqui — só a troca para o Drive neste post acontece. A limpeza semanal
+    // apaga a cópia quando todos os posts que a usam já saíram.
+    const { data: clientRow } = await supabase.from('contents').select('client_id').eq('id', contentId).single()
+    const { data: others } = clientRow
+      ? await supabase
+          .from('contents')
+          .select('generated_image_url, media_urls')
+          .eq('client_id', clientRow.client_id)
+          .neq('id', contentId)
+          .neq('status', 'published')
+      : { data: [] as { generated_image_url: string | null; media_urls: string[] | null }[] }
+    const othersBlob = JSON.stringify(others ?? [])
+    const stillUsed = (path: string) => othersBlob.includes(path.split('/').pop()!)
+    const deletable = toDelete.filter((p) => !stillUsed(p))
+
     // Banco primeiro: se o storage falhar, sobra arquivo órfão — inverter a
     // ordem deixaria o conteúdo apontando para um arquivo já apagado.
     const update: Record<string, unknown> = {}
@@ -89,14 +107,14 @@ export async function cleanupAfterPublish(
       }
     }
 
-    const { error: delError } = await supabase.storage.from('media').remove(toDelete)
+    const { error: delError } = deletable.length ? await supabase.storage.from('media').remove(deletable) : { error: null }
     if (delError) {
       console.error('[cleanup-media] remove falhou:', delError.message)
       return noop
     }
 
     console.log(`[cleanup-media] ${toDelete.length} arquivo(s) removido(s) do conteúdo ${contentId}`)
-    return { removed: toDelete.length, freedPaths: toDelete }
+    return { removed: deletable.length, freedPaths: deletable }
   } catch (err) {
     console.error('[cleanup-media] erro:', err)
     return noop
