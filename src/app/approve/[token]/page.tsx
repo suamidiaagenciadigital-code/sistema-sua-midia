@@ -58,7 +58,19 @@ const TYPE_EMOJI: Record<string, string> = {
   carrossel: '🗂️',
 }
 
-function formatDate(d: string) {
+// Dia + horário, para ordenar do mais cedo para o mais tarde. Post sem horário
+// fica depois dos que têm horário no mesmo dia.
+function whenKey(c: { scheduled_date?: string | null; scheduled_time?: string | null }): string {
+  return `${c.scheduled_date ?? '9999-99-99'} ${(c.scheduled_time ?? '99:99').slice(0, 5)}`
+}
+
+// "segunda-feira, 2 de novembro · 07:00" (só o dia, se o post não tiver horário)
+function formatDate(d: string, time?: string | null) {
+  const day = formatDay(d)
+  return time ? `${day} · ${time.slice(0, 5)}` : day
+}
+
+function formatDay(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long',
   })
@@ -83,30 +95,23 @@ export default async function PublicApprovalPage({ params }: Props) {
 
   const { data: contents } = await supabase
     .from('contents')
-    .select('id, title, type, caption, script, cta, scheduled_date, created_at, status, revision_notes, generated_image_url, media_urls, requires_client_approval')
+    .select('id, title, type, caption, script, cta, scheduled_date, scheduled_time, created_at, status, revision_notes, generated_image_url, media_urls, requires_client_approval')
     .eq('client_id', client.id)
     .in('status', ['sent_to_client', 'approved_by_client', 'published'])
     .order('created_at', { ascending: false })
 
-  // Pendentes: ordem crescente por data agendada (mais antigo primeiro)
+  // Pendentes: do mais cedo para o mais tarde (dia e depois horário)
   // Stories só aparecem se requires_client_approval = true
   const pending = (contents ?? [])
     .filter(c => c.status === 'sent_to_client' && (c.type !== 'story' || c.requires_client_approval))
-    .sort((a, b) => {
-      const da = a.scheduled_date ?? ''
-      const db = b.scheduled_date ?? ''
-      return da.localeCompare(db)
-    })
-  // Aprovados: ordem decrescente por data agendada (mais recente primeiro)
-  // Limitado aos 10 mais recentes para não sobrecarregar o mobile
+    .sort((a, b) => whenKey(a).localeCompare(whenKey(b)))
+  // Aprovados: pega os 10 mais recentes (para não sobrecarregar o mobile) e
+  // mostra esses 10 também em ordem cronológica, do mais cedo para o mais tarde
   const approved = (contents ?? [])
     .filter(c => (c.status === 'approved_by_client' || c.status === 'published') && c.type !== 'story')
-    .sort((a, b) => {
-      const da = a.scheduled_date ?? ''
-      const db = b.scheduled_date ?? ''
-      return db.localeCompare(da)
-    })
+    .sort((a, b) => whenKey(b).localeCompare(whenKey(a)))
     .slice(0, 10)
+    .sort((a, b) => whenKey(a).localeCompare(whenKey(b)))
 
   const initials = client.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
@@ -166,7 +171,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                       </div>
                     </div>
                     {c.scheduled_date && (
-                      <span className="text-zinc-500 text-xs">{formatDate(c.scheduled_date)}</span>
+                      <span className="text-zinc-500 text-xs">{formatDate(c.scheduled_date, c.scheduled_time)}</span>
                     )}
                   </div>
 
@@ -310,7 +315,7 @@ export default async function PublicApprovalPage({ params }: Props) {
                         </div>
                         <div className="flex items-center gap-2">
                           {c.scheduled_date && (
-                            <span className="text-zinc-500 text-xs">{formatDate(c.scheduled_date)}</span>
+                            <span className="text-zinc-500 text-xs">{formatDate(c.scheduled_date, c.scheduled_time)}</span>
                           )}
                           <span className="flex items-center gap-1 text-xs font-medium text-green-400 bg-green-950/40 border border-green-800/50 rounded-full px-2.5 py-0.5">
                             ✓ Aprovado
