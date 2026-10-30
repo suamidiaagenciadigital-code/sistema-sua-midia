@@ -11,6 +11,16 @@ export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id')!
   const src = req.nextUrl.searchParams.get('src')!
   const supabase = createServiceClient()
+  if (req.nextUrl.searchParams.get('list')) {
+    const t = await getGoogleAccessToken()
+    const out = []
+    for (const loc of ['15755543188347648092','3359630011444988655']) {
+      const r = await fetch('https://mybusiness.googleapis.com/v4/accounts/114410726627699087332/locations/' + loc + '/localPosts?pageSize=3', { headers: { Authorization: 'Bearer ' + t.token } })
+      const j = await r.json()
+      out.push((j.localPosts ?? []).map((x: any) => ({ n: x.name.slice(-6), state: x.state, created: x.createTime, cta: x.callToAction, media: x.media?.map((m: any) => m.mediaFormat), t: String(x.summary).slice(0, 40) })))
+    }
+    return NextResponse.json(out)
+  }
   if (req.nextUrl.searchParams.get('del')) {
     const { data: d } = await supabase.from('contents').select('gbp_post_name').eq('id', id).single()
     const t = await getGoogleAccessToken()
