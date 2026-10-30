@@ -10,10 +10,21 @@ export function adaptPostForGbp(caption: string | null | undefined): string {
   let t = (caption ?? '').replace(/\r\n/g, '\n')
 
   t = t.replace(/\*\*([\s\S]+?)\*\*|__([\s\S]+?)__/g, '$1$2').replace(/\*/g, '') // negrito/itálico em markdown: o Google mostra os asteriscos
-  t = t.replace(/https?:\/\/\S+|www\.\S+/gi, '')                   // links
-  t = t.replace(/(?:\+?55\s?)?\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}/g, '') // telefones BR
-  t = t.replace(/(^|\s)@[\w.]+/g, '$1')                            // menções
-  t = t.replace(/(^|\s)#[\p{L}\p{N}_]+/gu, '$1')                   // hashtags
+  // Links, telefones, menções e hashtags saem linha a linha. Se a remoção deixa a
+  // linha sem texto ou só com um rótulo ("📲 WhatsApp:", "🌐"), a linha toda sai.
+  t = t
+    .split('\n')
+    .map((line) => {
+      const clean = line
+        .replace(/https?:\/\/\S+|www\.\S+/gi, '')                        // links
+        .replace(/(?:\+?55\s?)?\(?\d{2}\)?\s?9?\d{4}[-\s]?\d{4}/g, '')   // telefones BR
+        .replace(/(^|\s)@[\w.]+/g, '$1')                                 // menções
+        .replace(/(^|\s)#[\p{L}\p{N}_]+/gu, '$1')                        // hashtags
+      if (clean === line) return line
+      const t2 = clean.trim()
+      return !/[\p{L}\p{N}]/u.test(t2) || /:$/.test(t2) ? '' : clean
+    })
+    .join('\n')
   t = t.replace(/\s*[—–]\s*/g, ', ')                               // sem travessão
   t = t
     .split('\n')
