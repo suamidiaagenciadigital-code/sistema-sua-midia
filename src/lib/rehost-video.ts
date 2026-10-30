@@ -55,6 +55,26 @@ export async function findExistingRehost(
 }
 
 /**
+ * Confere se uma imagem baixada está inteira. O Drive às vezes corta o download
+ * no meio sem informar o tamanho (content-length), e o Instagram rejeita o
+ * arquivo com "The image format is not supported". PNG termina em IEND, JPEG em
+ * FFD9; outros formatos e vídeos não são verificados aqui.
+ */
+export function isCompleteImage(buf: ArrayBuffer | Uint8Array, contentType: string): boolean {
+  const b = buf instanceof Uint8Array ? buf : new Uint8Array(buf)
+  if (contentType.includes('png')) {
+    const tail = [0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]
+    return b.length > 8 && tail.every((v, i) => b[b.length - 8 + i] === v)
+  }
+  if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+    let end = b.length
+    while (end > 2 && b[end - 1] === 0) end--
+    return end > 2 && b[end - 2] === 0xff && b[end - 1] === 0xd9
+  }
+  return true
+}
+
+/**
  * Se a URL for do Google Drive e o arquivo for vídeo OU imagem, faz o
  * download e re-hospeda no Supabase Storage. Retorna a URL pública do
  * Supabase, ou a URL original em caso de falha (fallback seguro — quem
@@ -108,6 +128,7 @@ export async function rehostIfDriveVideo(
     // Download truncado ou pequeno demais: não sobe arquivo corrompido.
     if (expectedLen > 0 && buffer.byteLength < expectedLen * 0.98) return url
     if (buffer.byteLength < (isImage ? 2_000 : 50_000)) return url
+    if (isImage && !isCompleteImage(buffer, contentType)) return url
 
     let ext: string
     let uploadContentType: string

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { findExistingRehost } from '@/lib/rehost-video'
+import { findExistingRehost, isCompleteImage } from '@/lib/rehost-video'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -94,6 +94,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { mime, ext } = detectRealType(bytes, contentTypeHeader)
+  // Download cortado no meio pelo Drive: não grava arquivo corrompido
+  if (!isCompleteImage(bytes, mime)) {
+    return NextResponse.json({ error: 'O Drive entregou o arquivo incompleto. Tente de novo.' }, { status: 502 })
+  }
   const path = `${clientId}/drive-${fileId}-${Date.now()}.${ext}`
   const db = createServiceClient()
 

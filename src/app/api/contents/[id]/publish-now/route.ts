@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getMetaToken } from '@/lib/meta-token'
 import { cleanupAfterPublish } from '@/lib/cleanup-media'
-import { findExistingRehost } from '@/lib/rehost-video'
+import { findExistingRehost, isCompleteImage } from '@/lib/rehost-video'
 import { adaptPostForGbp } from '@/lib/gbp-text'
 import { checkGbpVideo, createGbpPost, createGbpVideo, getGoogleAccessToken } from '@/lib/google-business'
 
@@ -96,6 +96,7 @@ async function rehostDriveFileForPublish(
         // Download truncado ou pequeno demais pra ser o arquivo de verdade.
         if (expectedLen > 0 && buf.byteLength < expectedLen * 0.98) continue
         if (buf.byteLength < (isImage ? 2_000 : 50_000)) continue
+        if (isImage && !isCompleteImage(buf, ct)) continue
         buffer = buf
         contentType = ct
       } catch {
