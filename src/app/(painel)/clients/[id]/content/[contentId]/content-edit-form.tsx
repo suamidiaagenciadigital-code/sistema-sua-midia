@@ -865,11 +865,11 @@ export function ContentEditForm({
                 style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
               >
                 <input type="hidden" name="gbp_toggle_present" value="1" />
-                {content.type === 'imagem' ? (
+                {content.type === 'imagem' || content.type === 'reel' ? (
                   <>
                     <label className="flex items-center gap-2 text-sm text-white font-medium">
                       <input type="checkbox" name="publish_to_gbp" defaultChecked={gbp.publish} className="h-4 w-4" />
-                      Publicar também no Google
+                      {content.type === 'reel' ? 'Enviar o vídeo para a galeria do Google' : 'Publicar também no Google'}
                       {gbp.status === 'published' && <span className="text-xs text-emerald-400 font-normal">✓ publicado</span>}
                       {gbp.status === 'failed' && <span className="text-xs text-red-400 font-normal">✗ falhou</span>}
                       {gbp.status === 'skipped' && <span className="text-xs text-slate-400 font-normal">ignorado</span>}
@@ -877,6 +877,11 @@ export function ContentEditForm({
                     {gbp.error && gbp.status !== 'published' && (
                       <p className="text-xs text-red-300">{gbp.error}</p>
                     )}
+                    {content.type === 'reel' ? (
+                      <p className="text-xs text-slate-400">
+                        Vai para a galeria de fotos e vídeos do perfil, sem legenda. Só vídeos de até 30 s e 26 MB.
+                      </p>
+                    ) : (
                     <div className="space-y-1">
                       <p className="text-[11px] uppercase tracking-wide text-slate-500">Texto que vai para o Google</p>
                       <p className="text-xs text-slate-300 whitespace-pre-wrap">
@@ -884,6 +889,7 @@ export function ContentEditForm({
                       </p>
                       <p className="text-[11px] text-slate-600">Sem hashtags, @, links, telefones e travessão. Máximo de 1500 caracteres.</p>
                     </div>
+                    )}
                   </>
                 ) : (
                   <p className="text-xs text-slate-500">

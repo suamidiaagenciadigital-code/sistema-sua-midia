@@ -48,7 +48,7 @@ export async function updateContentAction(clientId: string, contentId: string, f
 
   // O checkbox do Google só existe quando o cliente tem o Google ligado; o campo
   // oculto avisa que ele estava na tela (desmarcado não envia nada no formulário).
-  const gbpFields = formData.get('gbp_toggle_present') === '1' && type === 'imagem'
+  const gbpFields = formData.get('gbp_toggle_present') === '1' && (type === 'imagem' || type === 'reel')
     ? { publish_to_gbp: formData.get('publish_to_gbp') === 'on' }
     : {}
 

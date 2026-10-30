@@ -4,7 +4,7 @@ import { getMetaToken } from '@/lib/meta-token'
 import { cleanupAfterPublish } from '@/lib/cleanup-media'
 import { findExistingRehost } from '@/lib/rehost-video'
 import { adaptPostForGbp } from '@/lib/gbp-text'
-import { createGbpPost, getGoogleAccessToken } from '@/lib/google-business'
+import { checkGbpVideo, createGbpPost, createGbpVideo, getGoogleAccessToken } from '@/lib/google-business'
 
 // Publicação pode demorar até 3 min aguardando processamento do vídeo no Instagram
 export const maxDuration = 300
@@ -515,9 +515,31 @@ export async function POST(
       } else if (gct.publish_to_gbp === false) {
         gbp.status = 'skipped'
         gbp.error = 'Desligado neste post'
+      } else if (type === 'reel') {
+        // Reel de até 30 s vai para a galeria do perfil (a API não aceita vídeo em post)
+        const videoUrl = resolveVideoUrl(generatedImageUrl) ?? generatedImageUrl ?? ''
+        const check = videoUrl ? await checkGbpVideo(videoUrl) : { ok: false, reason: 'Post sem vídeo' }
+        if (!check.ok) {
+          gbp.status = 'skipped'; gbp.error = check.reason ?? 'Vídeo não atende aos limites do Google'
+        } else {
+          const { token, error: tokenError } = await getGoogleAccessToken()
+          if (!token) {
+            gbp.status = 'failed'; gbp.error = tokenError ?? 'Google não conectado'
+          } else {
+            const input = { accountId: gc.gbp_account_id as string, locationId: gc.gbp_location_id as string, videoUrl }
+            let res = await createGbpVideo(token, input)
+            for (const wait of [2000, 6000]) {
+              if (res.name || !res.retryable) break
+              await new Promise((r) => setTimeout(r, wait))
+              res = await createGbpVideo(token, input)
+            }
+            if (res.name) { gbp.status = 'published'; gbp.post_name = res.name }
+            else { gbp.status = 'failed'; gbp.error = res.error }
+          }
+        }
       } else if (type !== 'imagem') {
         gbp.status = 'skipped'
-        gbp.error = `Só imagem única vai para o Google (este post é ${type})`
+        gbp.error = `Só imagem e reel vão para o Google (este post é ${type})`
       } else {
         const summary = adaptPostForGbp(content.caption as string | null)
         if (!resolvedImageUrl) {

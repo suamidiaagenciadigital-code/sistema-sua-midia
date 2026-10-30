@@ -201,6 +201,78 @@ export async function createGbpPost(token: string, input: GbpPostInput): Promise
   }
 }
 
+// ── Vídeo (galeria do perfil) ────────────────────────────────────────────────
+// A API de posts só aceita foto; vídeo entra pela API de mídia, na galeria do
+// perfil (sem legenda nem botão). Limites do Google: 30 s, 75 MB, 720p+ —
+// usamos 26 MB por segurança, que é o valor publicado nas diretrizes.
+
+export const GBP_VIDEO_MAX_SECONDS = 30
+export const GBP_VIDEO_MAX_BYTES = 26 * 1024 * 1024
+
+/** Duração (s) de um MP4 lida do átomo mvhd; null se não achar. */
+export function mp4DurationSeconds(buf: Buffer): number | null {
+  const i = buf.indexOf('mvhd')
+  if (i < 0 || i + 24 > buf.length) return null
+  const version = buf[i + 4]
+  if (version === 1) {
+    if (i + 36 > buf.length) return null
+    const timescale = buf.readUInt32BE(i + 24)
+    const duration = Number(buf.readBigUInt64BE(i + 28))
+    return timescale ? duration / timescale : null
+  }
+  const timescale = buf.readUInt32BE(i + 16)
+  const duration = buf.readUInt32BE(i + 20)
+  return timescale ? duration / timescale : null
+}
+
+/** Confere tamanho e duração do vídeo. `reason` vem preenchido quando não serve. */
+export async function checkGbpVideo(url: string): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const head = await fetch(url, { method: 'HEAD' })
+    const size = Number(head.headers.get('content-length') ?? 0)
+    if (size > GBP_VIDEO_MAX_BYTES) {
+      return { ok: false, reason: `Vídeo grande demais para o Google (${(size / 1048576).toFixed(0)} MB; máx. 26 MB)` }
+    }
+    const res = await fetch(url)
+    if (!res.ok) return { ok: false, reason: `Não consegui baixar o vídeo (${res.status})` }
+    const buf = Buffer.from(await res.arrayBuffer())
+    if (buf.length > GBP_VIDEO_MAX_BYTES) {
+      return { ok: false, reason: `Vídeo grande demais para o Google (${(buf.length / 1048576).toFixed(0)} MB; máx. 26 MB)` }
+    }
+    const secs = mp4DurationSeconds(buf)
+    if (secs == null) return { ok: false, reason: 'Não consegui ler a duração do vídeo' }
+    if (secs > GBP_VIDEO_MAX_SECONDS) {
+      return { ok: false, reason: `Vídeo com ${Math.round(secs)} s (o Google aceita até ${GBP_VIDEO_MAX_SECONDS} s)` }
+    }
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, reason: String((e as Error)?.message ?? e) }
+  }
+}
+
+export async function createGbpVideo(
+  token: string,
+  input: { accountId: string; locationId: string; videoUrl: string },
+): Promise<GbpPostResult> {
+  const res = await fetch(`https://mybusiness.googleapis.com/v4/${input.accountId}/${input.locationId}/media`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mediaFormat: 'VIDEO',
+      locationAssociation: { category: 'ADDITIONAL' },
+      sourceUrl: input.videoUrl,
+    }),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (res.ok && json.name) return { name: json.name, state: null, error: null, retryable: false }
+  return {
+    name: null,
+    state: null,
+    error: json?.error?.message ?? `Google respondeu ${res.status}`,
+    retryable: res.status === 429 || res.status >= 500,
+  }
+}
+
 export async function deleteGbpPost(token: string, postName: string): Promise<boolean> {
   const res = await fetch(`https://mybusiness.googleapis.com/v4/${postName}`, {
     method: 'DELETE',
