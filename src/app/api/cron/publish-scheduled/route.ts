@@ -25,6 +25,49 @@ export async function GET(req: NextRequest) {
   const sevenDaysAgo = new Date(brasiliaTime.getTime() - 7 * 24 * 60 * 60 * 1000)
   const sevenDaysAgoDate = sevenDaysAgo.toISOString().split('T')[0]
 
+  // Aprovação automática: post que o cliente recebeu ("Enviado ao cliente") e não
+  // aprovou até 30 min antes do horário é aprovado aqui; a publicação em si sai
+  // no horário, pelo passo abaixo. Post em "Revisar" (o cliente pediu correção) e
+  // rascunho (o cliente nem recebeu) não entram. Só olha as últimas 24 h para não
+  // aprovar post velho que ficou esquecido.
+  const AUTO_APPROVE_MIN = 30
+  const yesterday = new Date(brasiliaTime.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const tomorrow = new Date(brasiliaTime.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  let autoApproved = 0
+  const { data: pendingApproval } = await supabase
+    .from('contents')
+    .select('id, scheduled_date, scheduled_time')
+    .eq('status', 'sent_to_client')
+    .not('scheduled_date', 'is', null)
+    .gte('scheduled_date', yesterday)
+    .lte('scheduled_date', tomorrow)
+  for (const c of pendingApproval ?? []) {
+    const at = Date.parse(`${c.scheduled_date}T${((c.scheduled_time as string | null) ?? '00:00').slice(0, 5)}:00-03:00`)
+    if (Number.isNaN(at)) continue
+    const msLeft = at - now.getTime()
+    if (msLeft > AUTO_APPROVE_MIN * 60 * 1000 || msLeft < -24 * 60 * 60 * 1000) continue
+    // Condicional no status: se o cliente aprovar ou pedir revisão nesse instante, ele ganha.
+    let upd = await supabase
+      .from('contents')
+      .update({ status: 'approved_by_client', auto_approved: true })
+      .eq('id', c.id)
+      .eq('status', 'sent_to_client')
+      .select('id')
+    // Coluna auto_approved ainda não existe (migration_v21 pendente): aprova sem a marca
+    if (upd.error) {
+      upd = await supabase
+        .from('contents')
+        .update({ status: 'approved_by_client' })
+        .eq('id', c.id)
+        .eq('status', 'sent_to_client')
+        .select('id')
+    }
+    if (upd.data && upd.data.length > 0) {
+      autoApproved++
+      console.log(`[cron] Aprovação automática: ${c.id} (${c.scheduled_date} ${c.scheduled_time})`)
+    }
+  }
+
   // Buscar aprovados dentro dos últimos 7 dias (filtra horário no JS)
   const { data: candidates, error: dbError } = await supabase
     .from('contents')
@@ -40,7 +83,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!candidates || candidates.length === 0) {
-    return NextResponse.json({ ok: true, checked: 0, published: 0 })
+    return NextResponse.json({ ok: true, checked: 0, published: 0, autoApproved })
   }
 
   // Filtrar os que a hora já chegou
@@ -55,7 +98,7 @@ export async function GET(req: NextRequest) {
   })
 
   if (toPublish.length === 0) {
-    return NextResponse.json({ ok: true, checked: candidates.length, published: 0 })
+    return NextResponse.json({ ok: true, checked: candidates.length, published: 0, autoApproved })
   }
 
   const baseUrl =
@@ -110,6 +153,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     checked: candidates.length,
     published: toPublish.length,
+    autoApproved,
     results,
   })
 }
