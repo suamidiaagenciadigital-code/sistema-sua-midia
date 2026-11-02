@@ -42,8 +42,27 @@ export async function findExistingRehost(
       .from('media')
       .list(clientId, { limit: 100, search: `drive-${fileId}` })
 
-    const hit = data?.find((f) => f.name.startsWith(`drive-${fileId}-`))
+    // Pode haver mais de uma cópia (o arquivo mudou no Drive e foi baixado de
+    // novo): vale a mais recente, que tem o maior timestamp no nome.
+    const hits = (data ?? []).filter((f) => f.name.startsWith(`drive-${fileId}-`)).sort((a, b) => a.name.localeCompare(b.name))
+    const hit = hits[hits.length - 1]
     if (!hit) return null
+
+    // Se o arquivo foi trocado no Drive (mesmo ID, conteúdo novo), o tamanho
+    // muda: a cópia velha não serve e o chamador baixa de novo.
+    const copySize = Number((hit.metadata as { size?: number } | null)?.size ?? 0)
+    if (copySize > 0) {
+      try {
+        const head = await fetch(
+          `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`,
+          { method: 'HEAD', signal: AbortSignal.timeout(8_000) },
+        )
+        const driveSize = Number(head.headers.get('content-length') ?? 0)
+        if (head.ok && driveSize > 0 && driveSize !== copySize) return null
+      } catch {
+        // sem resposta do Drive: fica com a cópia que já existe
+      }
+    }
 
     const { data: pub } = supabase.storage
       .from('media')
