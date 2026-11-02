@@ -68,6 +68,54 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Stories entram "Agendado" (não vão para a página do cliente): na aprovação
+  // manual são liberados quando o cliente aprova um post do mesmo dia (ver
+  // /api/public-approval). Aqui seguem o mesmo prazo do feed: 30 min antes do
+  // horário, a menos que o cliente tenha pedido revisão de algo daquele dia.
+  const { data: pendingStories } = await supabase
+    .from('contents')
+    .select('id, client_id, scheduled_date, scheduled_time')
+    .eq('type', 'story')
+    .eq('status', 'scheduled')
+    .not('scheduled_date', 'is', null)
+    .gte('scheduled_date', yesterday)
+    .lte('scheduled_date', tomorrow)
+  const dueStories = (pendingStories ?? []).filter((s) => {
+    const at = Date.parse(`${s.scheduled_date}T${((s.scheduled_time as string | null) ?? '00:00').slice(0, 5)}:00-03:00`)
+    if (Number.isNaN(at)) return false
+    const msLeft = at - now.getTime()
+    return msLeft <= AUTO_APPROVE_MIN * 60 * 1000 && msLeft >= -24 * 60 * 60 * 1000
+  })
+  if (dueStories.length > 0) {
+    const { data: revisions } = await supabase
+      .from('contents')
+      .select('client_id, scheduled_date')
+      .eq('status', 'revision')
+      .in('scheduled_date', [...new Set(dueStories.map((s) => s.scheduled_date as string))])
+    const held = new Set((revisions ?? []).map((r) => `${r.client_id}|${r.scheduled_date}`))
+    for (const s of dueStories) {
+      if (held.has(`${s.client_id}|${s.scheduled_date}`)) continue
+      let upd = await supabase
+        .from('contents')
+        .update({ status: 'approved_by_client', auto_approved: true })
+        .eq('id', s.id)
+        .eq('status', 'scheduled')
+        .select('id')
+      if (upd.error) {
+        upd = await supabase
+          .from('contents')
+          .update({ status: 'approved_by_client' })
+          .eq('id', s.id)
+          .eq('status', 'scheduled')
+          .select('id')
+      }
+      if (upd.data && upd.data.length > 0) {
+        autoApproved++
+        console.log(`[cron] Aprovação automática (story): ${s.id} (${s.scheduled_date} ${s.scheduled_time})`)
+      }
+    }
+  }
+
   // Buscar aprovados dentro dos últimos 7 dias (filtra horário no JS)
   const { data: candidates, error: dbError } = await supabase
     .from('contents')
