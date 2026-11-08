@@ -204,10 +204,10 @@ export async function createGbpPost(token: string, input: GbpPostInput): Promise
 // ── Vídeo (galeria do perfil) ────────────────────────────────────────────────
 // A API de posts só aceita foto; vídeo entra pela API de mídia, na galeria do
 // perfil (sem legenda nem botão). Limites do Google: 30 s, 75 MB, 720p+ —
-// usamos 26 MB por segurança, que é o valor publicado nas diretrizes.
+// limite do Google: 75 MB (a Ayrshare cita 26 MB; liberado em 08/11/2026 para testar com Reel real).
 
 export const GBP_VIDEO_MAX_SECONDS = 30
-export const GBP_VIDEO_MAX_BYTES = 26 * 1024 * 1024
+export const GBP_VIDEO_MAX_BYTES = 75 * 1024 * 1024
 
 /** Duração (s) de um MP4 lida do átomo mvhd; null se não achar. */
 export function mp4DurationSeconds(buf: Buffer): number | null {
@@ -231,13 +231,13 @@ export async function checkGbpVideo(url: string): Promise<{ ok: boolean; reason?
     const head = await fetch(url, { method: 'HEAD' })
     const size = Number(head.headers.get('content-length') ?? 0)
     if (size > GBP_VIDEO_MAX_BYTES) {
-      return { ok: false, reason: `Vídeo grande demais para o Google (${(size / 1048576).toFixed(0)} MB; máx. 26 MB)` }
+      return { ok: false, reason: `Vídeo grande demais para o Google (${(size / 1048576).toFixed(0)} MB; máx. 75 MB)` }
     }
     const res = await fetch(url)
     if (!res.ok) return { ok: false, reason: `Não consegui baixar o vídeo (${res.status})` }
     const buf = Buffer.from(await res.arrayBuffer())
     if (buf.length > GBP_VIDEO_MAX_BYTES) {
-      return { ok: false, reason: `Vídeo grande demais para o Google (${(buf.length / 1048576).toFixed(0)} MB; máx. 26 MB)` }
+      return { ok: false, reason: `Vídeo grande demais para o Google (${(buf.length / 1048576).toFixed(0)} MB; máx. 75 MB)` }
     }
     const secs = mp4DurationSeconds(buf)
     if (secs == null) return { ok: false, reason: 'Não consegui ler a duração do vídeo' }

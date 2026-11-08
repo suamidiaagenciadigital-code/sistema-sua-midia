@@ -879,7 +879,7 @@ export function ContentEditForm({
                     )}
                     {content.type === 'reel' ? (
                       <p className="text-xs text-slate-400">
-                        Vai para a galeria de fotos e vídeos do perfil, sem legenda. Só vídeos de até 30 s e 26 MB.
+                        Vai para a galeria de fotos e vídeos do perfil, sem legenda. Só vídeos de até 30 s e 75 MB.
                       </p>
                     ) : (
                     <div className="space-y-1">
