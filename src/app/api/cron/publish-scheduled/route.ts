@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { retryTransientFailures } from '@/lib/retry-failed-publish'
 
 // Cron Job — chamado diariamente às 11:10 BRT (14:10 UTC)
 // Publica automaticamente conteúdos aprovados cujo scheduled_date+time já passou
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+// Cron principal: publica o que venceu e, em seguida, tenta de novo as redes que
+// falharam por erro de conexão nas últimas 2 horas (ver lib/retry-failed-publish).
 export async function GET(req: NextRequest) {
+  const res = await publishDue(req)
+  if (res.status === 401) return res
+  const body = await res.json().catch(() => ({}))
+  const retry = await retryTransientFailures().catch((e: unknown) => ({
+    tried: 0,
+    results: [],
+    error: e instanceof Error ? e.message : String(e),
+  }))
+  return NextResponse.json({ ...body, retry }, { status: res.status })
+}
+
+async function publishDue(req: NextRequest): Promise<NextResponse> {
   // Vercel envia Authorization: Bearer {CRON_SECRET} automaticamente
   const authHeader = req.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

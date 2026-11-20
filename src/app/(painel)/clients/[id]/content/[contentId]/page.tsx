@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ChevronLeft, CalendarDays, AlertTriangle, CheckCircle2 } from 'lucide-react'
-import { STATUS_LABEL, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
+import { STATUS_LABEL, TYPE_LABEL, ContentStatus, publishFailure } from '@/lib/content-status'
 import { deleteContentAction } from './actions'
 import { ContentStatusActions } from './content-actions-client'
 import { ContentEditForm } from './content-edit-form'
@@ -57,6 +57,7 @@ export default async function ContentDetailPage({ params }: Props) {
 
   const status = content.status as ContentStatus
   const isPublished = status === 'published'
+  const failure = publishFailure(content as { status?: string | null; facebook_publish_error?: string | null; instagram_publish_error?: string | null })
 
   return (
     <div className="space-y-5 max-w-7xl">
@@ -95,6 +96,24 @@ export default async function ContentDetailPage({ params }: Props) {
           {STATUS_LABEL[status]}
         </span>
       </div>
+
+      {failure && (
+        <div
+          className="rounded-xl px-4 py-3 text-sm"
+          style={{ backgroundColor: 'rgba(153,27,27,0.25)', border: '1px solid rgba(248,113,113,0.35)', color: '#fca5a5' }}
+        >
+          <p className="font-semibold">Publicado, mas {failure.toLowerCase()}</p>
+          {(content as { facebook_publish_error?: string | null }).facebook_publish_error && (
+            <p className="text-xs mt-1">Facebook: {(content as { facebook_publish_error?: string | null }).facebook_publish_error}</p>
+          )}
+          {(content as { instagram_publish_error?: string | null }).instagram_publish_error && (
+            <p className="text-xs mt-1">Instagram: {(content as { instagram_publish_error?: string | null }).instagram_publish_error}</p>
+          )}
+          <p className="text-xs mt-2 opacity-80">
+            Em falhas de conexão o sistema tenta de novo sozinho por até 2 horas. Nos outros erros, use "Publicar agora" depois de corrigir a causa.
+          </p>
+        </div>
+      )}
 
       {/* Fluxo de aprovação (collapsible, client component) */}
       <ContentStatusActions clientId={id} contentId={contentId} currentStatus={content.status} contentType={content.type} />

@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
-import { STATUS_DOT, TYPE_ICON, ContentStatus } from '@/lib/content-status'
+import { STATUS_DOT, TYPE_ICON, ContentStatus, publishFailure } from '@/lib/content-status'
 
 interface ContentItem {
   id: string
@@ -13,6 +13,8 @@ interface ContentItem {
   status: string
   scheduled_date: string | null
   caption?: string | null
+  facebook_publish_error?: string | null
+  instagram_publish_error?: string | null
 }
 
 interface Props {
@@ -216,14 +218,14 @@ export function DraggableCalendar({ clientId, year, month, contents, firstWeekda
                     style={draggingId !== c.id ? { backgroundColor: 'rgba(255,255,255,0.04)' } : undefined}
                   >
                     <div
-                      className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_DOT[c.status as ContentStatus] ?? 'bg-zinc-500'}`}
+                      className={`h-1.5 w-1.5 rounded-full shrink-0 ${publishFailure(c) ? 'bg-red-500' : (STATUS_DOT[c.status as ContentStatus] ?? 'bg-zinc-500')}`}
                     />
                     <Link
                       href={`/clients/${clientId}/content/${c.id}`}
                       onClick={(e) => e.stopPropagation()}
                       className="text-xs truncate leading-tight flex-1 min-w-0"
                       style={{ color: '#94a3b8' }}
-                      title={c.title}
+                      title={publishFailure(c) ? `${c.title} — ${publishFailure(c)}` : c.title}
                     >
                       {TYPE_ICON[c.type]} {c.title}
                     </Link>

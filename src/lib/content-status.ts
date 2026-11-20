@@ -54,3 +54,21 @@ export const TYPE_ICON: Record<string, string> = {
   imagem: '🖼',
   story: '⚡',
 }
+
+/**
+ * Post marcado como "publicado" mas que falhou em alguma rede (o erro de cada
+ * rede fica guardado no post). Devolve o texto do aviso ou null se está tudo certo.
+ */
+export function publishFailure(c: {
+  status?: string | null
+  facebook_publish_error?: string | null
+  instagram_publish_error?: string | null
+}): string | null {
+  if (c.status !== 'published') return null
+  const fb = !!c.facebook_publish_error
+  const ig = !!c.instagram_publish_error
+  if (fb && ig) return 'Falhou no Facebook e no Instagram'
+  if (ig) return 'Falhou no Instagram'
+  if (fb) return 'Falhou no Facebook'
+  return null
+}

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, ExternalLink } from 'lucide-react'
-import { STATUS_DOT, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus } from '@/lib/content-status'
+import { STATUS_DOT, STATUS_LABEL, TYPE_ICON, TYPE_LABEL, ContentStatus, publishFailure } from '@/lib/content-status'
 import { ImportCalendarButton } from './import-calendar-button'
 import { DraggableCalendar } from './draggable-calendar'
 import { ClientSwitcher } from './client-switcher'
@@ -71,7 +71,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
 
   const { data: contents } = await supabase
     .from('contents')
-    .select('id, title, type, status, scheduled_date, caption')
+    .select('id, title, type, status, scheduled_date, caption, facebook_publish_error, instagram_publish_error')
     .eq('client_id', id)
     .gte('scheduled_date', firstDay)
     .lte('scheduled_date', lastDayStr)
@@ -292,6 +292,16 @@ export default async function CalendarPage({ params, searchParams }: Props) {
                     </p>
                   </div>
                 </div>
+                {publishFailure(c) ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                    style={{ backgroundColor: 'rgba(153,27,27,0.35)', color: '#f87171' }}
+                    title={[c.facebook_publish_error, c.instagram_publish_error].filter(Boolean).join(' · ')}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    Publicado · {publishFailure(c)}
+                  </span>
+                ) : (
                 <span
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
                   style={STATUS_BADGE_STYLE[c.status as ContentStatus]}
@@ -299,6 +309,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
                   <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[c.status as ContentStatus]}`} />
                   {STATUS_LABEL[c.status as ContentStatus]}
                 </span>
+                )}
               </Link>
             ))}
           </div>
