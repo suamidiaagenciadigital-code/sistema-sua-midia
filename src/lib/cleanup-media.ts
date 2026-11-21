@@ -76,18 +76,26 @@ export async function cleanupAfterPublish(
     if (toDelete.length === 0) return noop
 
     // Arquivo compartilhado: o mesmo vídeo pode estar em outro post que ainda não
-    // foi publicado (ex.: reel e story do dia usam o mesmo arquivo do Drive).
+    // terminou (ex.: reel e story do dia usam o mesmo arquivo do Drive).
     // Esse post continua a apontar para a cópia, então ela não pode ser apagada
     // aqui — só a troca para o Drive neste post acontece. A limpeza semanal
     // apaga a cópia quando todos os posts que a usam já saíram.
+    //
+    // "Ainda não terminou" NÃO é só status != 'published': o cron marca todos os posts
+    // do horário como 'published' ANTES de publicar (claim), então o irmão que está no
+    // meio da publicação já aparece como publicado. Por isso também contam o post
+    // mexido na última hora (em andamento) e o que ficou com erro de rede (que ainda
+    // pode ser tentado de novo e precisa do arquivo). Foi o que derrubou o Reel da Don
+    // de 21/11 e os stories de 17/11.
     const { data: clientRow } = await supabase.from('contents').select('client_id').eq('id', contentId).single()
+    const recent = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const { data: others } = clientRow
       ? await supabase
           .from('contents')
           .select('generated_image_url, media_urls')
           .eq('client_id', clientRow.client_id)
           .neq('id', contentId)
-          .neq('status', 'published')
+          .or(`status.neq.published,updated_at.gte.${recent},facebook_publish_error.not.is.null,instagram_publish_error.not.is.null`)
       : { data: [] as { generated_image_url: string | null; media_urls: string[] | null }[] }
     const othersBlob = JSON.stringify(others ?? [])
     const stillUsed = (path: string) => othersBlob.includes(path.split('/').pop()!)
